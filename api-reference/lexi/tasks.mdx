@@ -1,0 +1,188 @@
+---
+title: "List Lexi Tasks"
+api: "GET /v1/lexi/tasks"
+description: "Retrieve pending approval tasks from Lexi AI"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+### Query Parameters
+
+<ParamField query="status" type="string" default="pending">
+  Filter by task status: `pending`, `approved`, `dismissed`, `completed`, `failed`
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="tasks" type="array">
+      Array of task objects
+      <Expandable title="Task object">
+        <ResponseField name="id" type="string">
+          Task UUID
+        </ResponseField>
+        <ResponseField name="type" type="string">
+          Task type: `prospect_search`, `campaign_start`, `contact_update`, `list_operation`
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Current status: `pending`, `approved`, `dismissed`, `completed`, `failed`
+        </ResponseField>
+        <ResponseField name="description" type="string">
+          Human-readable task description
+        </ResponseField>
+        <ResponseField name="created_at" type="string">
+          ISO 8601 timestamp
+        </ResponseField>
+        <ResponseField name="metadata" type="object">
+          Task-specific metadata (query params, list IDs, etc.)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/lexi/tasks", headers=headers)
+tasks = response.json()["data"]["tasks"]
+
+for task in tasks:
+    print(f"{task['type']}: {task['description']}")
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks',
+  {
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' }
+  }
+);
+
+const { data } = await response.json();
+data.tasks.forEach(task => {
+  console.log(`${task.type}: ${task.description}`);
+});
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "tasks": [
+      {
+        "id": "task-uuid-1",
+        "type": "prospect_search",
+        "status": "pending",
+        "description": "Search for 20 CEOs at law firms in New York",
+        "created_at": "2026-02-24T16:00:00Z",
+        "metadata": {
+          "query": {
+            "person_titles": ["CEO"],
+            "organization_industries": ["Legal"],
+            "person_locations": ["New York"]
+          },
+          "per_page": 20
+        }
+      },
+      {
+        "id": "task-uuid-2",
+        "type": "campaign_start",
+        "status": "pending",
+        "description": "Start campaign 'Q2 Outreach' for 150 contacts",
+        "created_at": "2026-02-24T15:30:00Z",
+        "metadata": {
+          "campaign_id": "campaign-uuid",
+          "contact_count": 150
+        }
+      }
+    ]
+  }
+}
+```
+
+## Filter by Status
+
+### Get Only Pending Tasks
+
+```bash
+curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks?status=pending" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+### Get Approved Tasks
+
+```bash
+curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks?status=approved" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+## Task Types
+
+| Type | Description |
+|------|-------------|
+| `prospect_search` | Search for prospects and save to CRM |
+| `campaign_start` | Launch an outreach campaign |
+| `contact_update` | Bulk update contacts |
+| `list_operation` | Create/modify lists |
+
+## Task Statuses
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Awaiting your approval |
+| `approved` | Approved, executing now |
+| `completed` | Successfully executed |
+| `dismissed` | You dismissed the task |
+| `failed` | Execution failed |
+
+## Polling for Tasks
+
+<Tip>
+  Poll this endpoint periodically to check for new tasks requiring approval. Alternatively, use [webhooks](/webhooks) when available.
+</Tip>
+
+```python
+import time
+
+while True:
+    response = requests.get(f"{BASE_URL}/v1/lexi/tasks", headers=headers)
+    tasks = response.json()["data"]["tasks"]
+    
+    if tasks:
+        print(f"Found {len(tasks)} pending tasks")
+        for task in tasks:
+            print(f"  - {task['description']}")
+            # Auto-approve or notify user
+    
+    time.sleep(60)  # Check every minute
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid API key |
+| 403 | `insufficient_permissions` | Missing `lexi` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

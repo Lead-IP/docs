@@ -1,97 +1,122 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Welcome to LeadLex API"
+description: "Build powerful integrations with your LeadLex workspace"
 ---
 
-## Setting up
+## What is the LeadLex API?
 
-Get your documentation site up and running in minutes.
+The LeadLex API enables you to programmatically interact with your workspace data, automate prospect research, manage contacts and campaigns, and leverage Lexi AI capabilities from your own applications.
 
 <Card
-  title="Start here"
+  title="Get Started in Minutes"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Follow our quickstart guide to make your first API call.
 </Card>
 
-## Make it yours
+## Key Features
 
-Design a docs site that looks great and empowers your users.
+<CardGroup cols={2}>
+  <Card
+    title="Prospect Search"
+    icon="magnifying-glass"
+    href="/api-reference/prospects/search"
+  >
+    Search for prospects using advanced filters (job titles, locations, company size)
+  </Card>
+  <Card
+    title="Contact Management"
+    icon="address-book"
+    href="/api-reference/contacts/list"
+  >
+    Create, update, and manage contacts in your CRM
+  </Card>
+  <Card
+    title="Campaign Automation"
+    icon="paper-plane"
+    href="/api-reference/campaigns/list"
+  >
+    Create and launch outreach campaigns programmatically
+  </Card>
+  <Card
+    title="Lexi AI Integration"
+    icon="robot"
+    href="/api-reference/lexi/chat"
+  >
+    Chat with Lexi AI and automate workflows with task approvals
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+## Authentication
 
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
+All API requests require an API key. Learn how to create and manage your keys:
 
 <Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
+  title="Authentication Guide"
+  icon="key"
+  href="/authentication"
 >
-  Browse our showcase of exceptional documentation sites.
+  API keys, permissions, and rate limits explained
 </Card>
+
+## Base URL
+
+```
+https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway
+```
+
+All endpoints are prefixed with `/v1/`.
+
+## Quick Example
+
+<CodeGroup>
+
+```bash cURL
+curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/contacts", headers=headers)
+contacts = response.json()["data"]["contacts"]
+```
+
+```javascript JavaScript
+const API_KEY = 'wbk_your_api_key_here';
+const BASE_URL = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+
+const response = await fetch(`${BASE_URL}/v1/contacts`, {
+  headers: { 'Authorization': `Bearer ${API_KEY}` }
+});
+const { data } = await response.json();
+console.log(data.contacts);
+```
+
+</CodeGroup>
+
+## Need Help?
+
+<CardGroup cols={2}>
+  <Card
+    title="Code Examples"
+    icon="code"
+    href="/examples"
+  >
+    Complete workflows in Python, JavaScript, and cURL
+  </Card>
+  <Card
+    title="Contact Support"
+    icon="life-ring"
+    href="mailto:support@leadlex.com"
+  >
+    Reach out to our team for help
+  </Card>
+</CardGroup>

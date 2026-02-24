@@ -1,55 +1,57 @@
-# Mintlify Starter Kit
+# LeadLex API Documentation
 
-Use the starter kit to get your docs deployed and ready to customize.
+Official API documentation for the LeadLex Workspace API.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+## Overview
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+The LeadLex API enables developers to:
+- Search for prospects using advanced filters
+- Manage contacts and lists in your CRM
+- Create and launch outreach campaigns
+- Integrate with Lexi AI for workflow automation
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
+## Base URL
 
-## AI-assisted writing
+```
+https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway
+```
 
-Set up your AI coding tool to work with Mintlify:
+## Authentication
+
+All requests require a workspace API key:
 
 ```bash
-npx skills add https://mintlify.com/docs
+Authorization: Bearer wbk_your_api_key_here
 ```
 
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
+Get your API key at: [app.leadlex.com/settings/api](https://app.leadlex.com/settings/api)
 
-See the [AI tools guides](/ai-tools) for tool-specific setup.
+## Documentation
 
-## Development
+This repository contains the Mintlify-powered documentation site.
 
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
+### Local Development
 
+```bash
+# Install Mintlify CLI
+npm i -g mintlify
+
+# Start dev server
+mintlify dev
+
+# Open http://localhost:3000
 ```
-npm i -g mint
-```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+### Deployment
 
-```
-mint dev
-```
+This documentation is automatically deployed to [docs.leadlex.com](https://docs.leadlex.com) via Mintlify.
 
-View your local preview at `http://localhost:3000`.
+## Support
 
-## Publishing changes
+- **Email**: [support@leadlex.com](mailto:support@leadlex.com)
+- **Website**: [leadlex.com](https://leadlex.com)
+- **Dashboard**: [app.leadlex.com](https://app.leadlex.com)
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+## License
 
-## Need help?
-
-### Troubleshooting
-
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
-
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+© 2026 LeadLex. All rights reserved.

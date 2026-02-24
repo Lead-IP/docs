@@ -1,0 +1,190 @@
+---
+title: "Update Contact"
+api: "PATCH /v1/contacts/:id"
+description: "Update an existing contact's information"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Contact UUID
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+### Body Parameters
+
+<Note>
+  Only include fields you want to update. Omitted fields will remain unchanged.
+</Note>
+
+<ParamField body="full_name" type="string">
+  Contact's full name
+</ParamField>
+
+<ParamField body="email" type="string">
+  Email address
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Phone number with country code
+</ParamField>
+
+<ParamField body="job_title" type="string">
+  Job title or position
+</ParamField>
+
+<ParamField body="company_name" type="string">
+  Company name
+</ParamField>
+
+<ParamField body="linkedin_url" type="string">
+  LinkedIn profile URL
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Additional notes (appends to existing notes)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The updated contact object
+  <Expandable title="Contact properties">
+    <ResponseField name="id" type="string">
+      Contact ID (unchanged)
+    </ResponseField>
+    <ResponseField name="full_name" type="string">
+      Updated full name
+    </ResponseField>
+    <ResponseField name="updated_date" type="string">
+      ISO 8601 timestamp of this update
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "job_title": "Chief Legal Officer",
+    "notes": "Promoted to CLO in Q1 2026"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+CONTACT_ID = "123e4567-e89b-12d3-a456-426614174000"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+updates = {
+    "job_title": "Chief Legal Officer",
+    "notes": "Promoted to CLO in Q1 2026"
+}
+
+response = requests.patch(
+    f"{BASE_URL}/v1/contacts/{CONTACT_ID}",
+    headers=headers,
+    json=updates
+)
+
+contact = response.json()["data"]
+print(f"Updated contact: {contact['job_title']}")
+```
+
+```javascript JavaScript
+const CONTACT_ID = '123e4567-e89b-12d3-a456-426614174000';
+
+const response = await fetch(
+  `https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts/${CONTACT_ID}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      job_title: 'Chief Legal Officer',
+      notes: 'Promoted to CLO in Q1 2026'
+    })
+  }
+);
+
+const { data } = await response.json();
+console.log(`Updated: ${data.job_title}`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "full_name": "Jane Doe",
+    "email": "jane@example.com",
+    "job_title": "Chief Legal Officer",
+    "company_name": "Acme Legal",
+    "notes": "Met at conference. Interested in legal automation tools.\nPromoted to CLO in Q1 2026",
+    "updated_date": "2026-02-24T15:00:00Z"
+  }
+}
+```
+
+## Partial Updates
+
+You can update a single field without affecting others:
+
+```bash
+# Update only the phone number
+curl -X PATCH \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts/123e4567 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "+1-555-9999"}'
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Invalid field format |
+| 401 | `invalid_key` | Invalid API key |
+| 403 | `insufficient_permissions` | Missing `write` permission |
+| 404 | `not_found` | Contact not found |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+### Example Validation Error
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Invalid request parameters",
+    "details": {
+      "fields": {
+        "email": "Invalid email format"
+      }
+    }
+  }
+}
+```

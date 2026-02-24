@@ -1,0 +1,534 @@
+---
+title: "Code Examples"
+description: "Complete workflows in Python, JavaScript, and cURL"
+---
+
+## Complete Automation Workflow
+
+This example shows a complete end-to-end automation:  
+**Search prospects → Save to CRM → Create list → Launch campaign**
+
+<Tabs>
+  <Tab title="Python">
+    ### Python Client Library
+
+    First, create a reusable client:
+
+    ```python leadlex_client.py
+    import requests
+    from typing import List, Dict, Optional
+
+    class LeadLexClient:
+        def __init__(self, api_key: str):
+            self.api_key = api_key
+            self.base_url = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+            self.session = requests.Session()
+            self.session.headers.update({"Authorization": f"Bearer {api_key}"})
+        
+        def _request(self, method: str, path: str, **kwargs) -> Dict:
+            url = f"{self.base_url}{path}"
+            response = self.session.request(method, url, **kwargs)
+            
+            # Check rate limits
+            if 'X-RateLimit-Remaining' in response.headers:
+                remaining = int(response.headers['X-RateLimit-Remaining'])
+                if remaining < 10:
+                    print(f"⚠️  Only {remaining} API calls remaining today")
+            
+            response.raise_for_status()
+            return response.json()
+        
+        def search_prospects(self, query: Dict, per_page: int = 25) -> List[Dict]:
+            result = self._request("POST", "/v1/prospects/search", 
+                                 json={"query": query, "per_page": per_page})
+            return result["data"]["prospects"]
+        
+        def save_prospects(self, prospects: List[Dict], list_id: str = None) -> Dict:
+            result = self._request("POST", "/v1/prospects/save", 
+                                 json={"prospects": prospects, "list_id": list_id})
+            return result["data"]
+        
+        def create_list(self, name: str, description: str = "") -> Dict:
+            result = self._request("POST", "/v1/lists", 
+                                 json={"name": name, "description": description})
+            return result["data"]
+        
+        def create_campaign(self, name: str, list_id: str, template: str) -> Dict:
+            result = self._request("POST", "/v1/campaigns",
+                                 json={"name": name, "list_id": list_id, "template": template})
+            return result["data"]
+        
+        def chat_with_lexi(self, message: str, context: Dict = None) -> Dict:
+            result = self._request("POST", "/v1/lexi/chat",
+                                 json={"message": message, "context": context or {}})
+            return result["data"]
+    ```
+
+    ### Complete Workflow
+
+    ```python automation.py
+    from leadlex_client import LeadLexClient
+    import os
+
+    client = LeadLexClient(api_key=os.getenv("LEADLEX_API_KEY"))
+
+    # Step 1: Search for prospects
+    print("🔍 Searching for CEOs at law firms...")
+    prospects = client.search_prospects(query={
+        "person_titles": ["CEO", "Chief Executive Officer"],
+        "organization_industries": ["Legal"],
+        "person_locations": ["United States"],
+        "organization_num_employees_ranges": ["11-50", "51-200"]
+    }, per_page=50)
+
+    print(f"✅ Found {len(prospects)} prospects\n")
+
+    # Step 2: Create a list
+    print("📋 Creating list...")
+    new_list = client.create_list(
+        name="Law Firm CEOs Q1 2026",
+        description="Target prospects for legal tech campaign"
+    )
+    list_id = new_list["id"]
+    print(f"✅ List created: {list_id}\n")
+
+    # Step 3: Save prospects to CRM
+    print("💾 Saving prospects to CRM...")
+    saved = client.save_prospects(prospects, list_id=list_id)
+    print(f"✅ Saved {saved['created']} contacts\n")
+
+    # Step 4: Ask Lexi to draft campaign
+    print("🤖 Asking Lexi to draft campaign...")
+    lexi_response = client.chat_with_lexi(
+        message=f"Create an outreach campaign for list {list_id}. "
+                "Focus on legal tech automation benefits.",
+        context={"list_id": list_id}
+    )
+    print(f"✅ Lexi: {lexi_response['response']}")
+    ```
+  </Tab>
+
+  <Tab title="JavaScript">
+    ### JavaScript/Node.js Client
+
+    ```javascript leadlex-client.js
+    class LeadLexClient {
+      constructor(apiKey) {
+        this.apiKey = apiKey;
+        this.baseUrl = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+      }
+
+      async request(method, path, options = {}) {
+        const url = `${this.baseUrl}${path}`;
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+            ...options.headers,
+          },
+          ...options,
+        });
+
+        // Check rate limits
+        const remaining = response.headers.get('X-RateLimit-Remaining');
+        if (remaining && parseInt(remaining) < 10) {
+          console.warn(`⚠️  Only ${remaining} API calls remaining today`);
+        }
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`API Error: ${error.error.message}`);
+        }
+
+        return response.json();
+      }
+
+      async searchProspects(query, perPage = 25) {
+        const result = await this.request('POST', '/v1/prospects/search', {
+          body: JSON.stringify({ query, per_page: perPage }),
+        });
+        return result.data.prospects;
+      }
+
+      async saveProspects(prospects, listId = null) {
+        const result = await this.request('POST', '/v1/prospects/save', {
+          body: JSON.stringify({ prospects, list_id: listId }),
+        });
+        return result.data;
+      }
+
+      async createList(name, description = '') {
+        const result = await this.request('POST', '/v1/lists', {
+          body: JSON.stringify({ name, description }),
+        });
+        return result.data;
+      }
+
+      async chatWithLexi(message, context = {}) {
+        const result = await this.request('POST', '/v1/lexi/chat', {
+          body: JSON.stringify({ message, context }),
+        });
+        return result.data;
+      }
+    }
+
+    module.exports = LeadLexClient;
+    ```
+
+    ### Complete Workflow
+
+    ```javascript automation.js
+    const LeadLexClient = require('./leadlex-client');
+
+    const client = new LeadLexClient(process.env.LEADLEX_API_KEY);
+
+    async function run() {
+      // Step 1: Search for prospects
+      console.log('🔍 Searching for CEOs at law firms...');
+      const prospects = await client.searchProspects({
+        person_titles: ['CEO', 'Chief Executive Officer'],
+        organization_industries: ['Legal'],
+        person_locations: ['United States'],
+        organization_num_employees_ranges: ['11-50', '51-200']
+      }, 50);
+
+      console.log(`✅ Found ${prospects.length} prospects\n`);
+
+      // Step 2: Create a list
+      console.log('📋 Creating list...');
+      const newList = await client.createList(
+        'Law Firm CEOs Q1 2026',
+        'Target prospects for legal tech campaign'
+      );
+      const listId = newList.id;
+      console.log(`✅ List created: ${listId}\n`);
+
+      // Step 3: Save prospects to CRM
+      console.log('💾 Saving prospects to CRM...');
+      const saved = await client.saveProspects(prospects, listId);
+      console.log(`✅ Saved ${saved.created} contacts\n`);
+
+      // Step 4: Ask Lexi to draft campaign
+      console.log('🤖 Asking Lexi to draft campaign...');
+      const lexiResponse = await client.chatWithLexi(
+        `Create an outreach campaign for list ${listId}. ` +
+        'Focus on legal tech automation benefits.',
+        { list_id: listId }
+      );
+      console.log(`✅ Lexi: ${lexiResponse.response}`);
+    }
+
+    run().catch(console.error);
+    ```
+  </Tab>
+
+  <Tab title="cURL">
+    ### Step 1: Search Prospects
+
+    ```bash
+    curl -X POST \
+      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/prospects/search \
+      -H "Authorization: Bearer wbk_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "query": {
+          "person_titles": ["CEO", "Chief Executive Officer"],
+          "organization_industries": ["Legal"],
+          "person_locations": ["United States"]
+        },
+        "per_page": 50
+      }'
+    ```
+
+    ### Step 2: Create a List
+
+    ```bash
+    curl -X POST \
+      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lists \
+      -H "Authorization: Bearer wbk_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "name": "Law Firm CEOs Q1 2026",
+        "description": "Target prospects for legal tech campaign"
+      }'
+    ```
+
+    ### Step 3: Save Prospects
+
+    ```bash
+    curl -X POST \
+      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/prospects/save \
+      -H "Authorization: Bearer wbk_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "prospects": [
+          {
+            "name": "John Smith",
+            "email": "john@example.com",
+            "title": "CEO",
+            "company_name": "Legal Corp"
+          }
+        ],
+        "list_id": "your-list-id-here"
+      }'
+    ```
+
+    ### Step 4: Chat with Lexi
+
+    ```bash
+    curl -X POST \
+      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/chat \
+      -H "Authorization: Bearer wbk_your_api_key_here" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "message": "Create an outreach campaign for this list",
+        "context": {
+          "list_id": "your-list-id-here"
+        }
+      }'
+    ```
+  </Tab>
+</Tabs>
+
+## Common Patterns
+
+### Error Handling
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    import requests
+
+    try:
+        response = requests.get(
+            f"{BASE_URL}/v1/contacts",
+            headers={"Authorization": f"Bearer {API_KEY}"}
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+    except requests.exceptions.HTTPError as e:
+        error = e.response.json()
+        if error["error"]["code"] == "rate_limited":
+            print("Rate limit exceeded! Try again later.")
+        elif error["error"]["code"] == "invalid_key":
+            print("Invalid API key")
+        else:
+            print(f"Error: {error['error']['message']}")
+    ```
+  </Tab>
+
+  <Tab title="JavaScript">
+    ```javascript
+    try {
+      const response = await fetch(`${BASE_URL}/v1/contacts`, {
+        headers: { 'Authorization': `Bearer ${API_KEY}` }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        
+        if (error.error.code === 'rate_limited') {
+          console.error('Rate limit exceeded! Try again later.');
+        } else if (error.error.code === 'invalid_key') {
+          console.error('Invalid API key');
+        } else {
+          console.error(`Error: ${error.error.message}`);
+        }
+        return;
+      }
+      
+      const data = await response.json();
+      // Process data...
+      
+    } catch (err) {
+      console.error('Network error:', err.message);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Pagination
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    def get_all_contacts(client):
+        """Fetch all contacts across multiple pages"""
+        all_contacts = []
+        page = 1
+        
+        while True:
+            response = client._request("GET", "/v1/contacts", params={
+                "page": page,
+                "per_page": 100
+            })
+            
+            contacts = response["data"]["contacts"]
+            all_contacts.extend(contacts)
+            
+            # Check if we've reached the end
+            total = response["meta"]["total"]
+            if len(all_contacts) >= total:
+                break
+            
+            page += 1
+        
+        return all_contacts
+    ```
+  </Tab>
+
+  <Tab title="JavaScript">
+    ```javascript
+    async function getAllContacts(client) {
+      const allContacts = [];
+      let page = 1;
+      
+      while (true) {
+        const response = await client.request('GET', '/v1/contacts', {
+          params: new URLSearchParams({ page, per_page: 100 })
+        });
+        
+        const contacts = response.data.contacts;
+        allContacts.push(...contacts);
+        
+        // Check if we've reached the end
+        const total = response.meta.total;
+        if (allContacts.length >= total) {
+          break;
+        }
+        
+        page++;
+      }
+      
+      return allContacts;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Rate Limit Monitoring
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    def monitor_rate_limits(response: requests.Response):
+        """Extract and log rate limit headers"""
+        limit = response.headers.get('X-RateLimit-Limit')
+        remaining = response.headers.get('X-RateLimit-Remaining')
+        reset = response.headers.get('X-RateLimit-Reset')
+        
+        if remaining:
+            percent = (int(remaining) / int(limit)) * 100
+            print(f"Rate limit: {remaining}/{limit} ({percent:.1f}% remaining)")
+            
+            if int(remaining) < 10:
+                print("⚠️  Warning: Running low on API calls!")
+    ```
+  </Tab>
+
+  <Tab title="JavaScript">
+    ```javascript
+    function monitorRateLimits(response) {
+      const limit = response.headers.get('X-RateLimit-Limit');
+      const remaining = response.headers.get('X-RateLimit-Remaining');
+      const reset = response.headers.get('X-RateLimit-Reset');
+      
+      if (remaining) {
+        const percent = (parseInt(remaining) / parseInt(limit)) * 100;
+        console.log(`Rate limit: ${remaining}/${limit} (${percent.toFixed(1)}% remaining)`);
+        
+        if (parseInt(remaining) < 10) {
+          console.warn('⚠️  Warning: Running low on API calls!');
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Batch Operations
+
+### Bulk Contact Creation
+
+<Tabs>
+  <Tab title="Python">
+    ```python
+    def bulk_create_contacts(client, contacts_data):
+        """Create multiple contacts efficiently"""
+        created = []
+        
+        for contact in contacts_data:
+            try:
+                result = client.create_contact(**contact)
+                created.append(result)
+                print(f"✓ Created: {contact['full_name']}")
+            except Exception as e:
+                print(f"✗ Failed: {contact['full_name']} - {e}")
+        
+        return created
+    
+    # Usage
+    contacts = [
+        {"full_name": "Alice Smith", "email": "alice@example.com"},
+        {"full_name": "Bob Jones", "email": "bob@example.com"},
+        {"full_name": "Carol White", "email": "carol@example.com"}
+    ]
+    
+    results = bulk_create_contacts(client, contacts)
+    print(f"\nCreated {len(results)}/{len(contacts)} contacts")
+    ```
+  </Tab>
+
+  <Tab title="JavaScript">
+    ```javascript
+    async function bulkCreateContacts(client, contactsData) {
+      const created = [];
+      
+      for (const contact of contactsData) {
+        try {
+          const result = await client.request('POST', '/v1/contacts', {
+            body: JSON.stringify(contact)
+          });
+          created.push(result.data);
+          console.log(`✓ Created: ${contact.full_name}`);
+        } catch (error) {
+          console.error(`✗ Failed: ${contact.full_name} - ${error.message}`);
+        }
+      }
+      
+      return created;
+    }
+    
+    // Usage
+    const contacts = [
+      { full_name: 'Alice Smith', email: 'alice@example.com' },
+      { full_name: 'Bob Jones', email: 'bob@example.com' },
+      { full_name: 'Carol White', email: 'carol@example.com' }
+    ];
+    
+    const results = await bulkCreateContacts(client, contacts);
+    console.log(`\nCreated ${results.length}/${contacts.length} contacts`);
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Authentication"
+    icon="key"
+    href="/authentication"
+  >
+    Learn about API keys and permissions
+  </Card>
+  <Card
+    title="API Reference"
+    icon="book"
+    href="/api-reference/contacts/list"
+  >
+    Browse all available endpoints
+  </Card>
+</CardGroup>

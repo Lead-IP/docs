@@ -1,0 +1,204 @@
+---
+title: "Webhooks"
+description: "Get real-time notifications when events occur in your workspace"
+---
+
+<Note>
+  **Coming Soon** — Webhooks are currently in development and will be available in Q2 2026.
+</Note>
+
+## What are Webhooks?
+
+Webhooks allow you to receive real-time HTTP notifications when specific events occur in your LeadLex workspace. Instead of polling the API, your application will be notified instantly.
+
+## Planned Event Types
+
+When webhooks launch, you'll be able to subscribe to these events:
+
+### Contact Events
+- `contact.created` — New contact added
+- `contact.updated` — Contact information changed
+- `contact.deleted` — Contact removed
+
+### Campaign Events
+- `campaign.created` — New campaign created
+- `campaign.started` — Campaign launched
+- `campaign.completed` — Campaign finished
+- `campaign.email_sent` — Individual email sent
+- `campaign.email_opened` — Recipient opened email
+- `campaign.email_replied` — Recipient replied
+
+### Lexi AI Events
+- `lexi.task_created` — Lexi created a new task requiring approval
+- `lexi.task_approved` — Task was approved
+- `lexi.task_completed` — Task execution finished
+- `lexi.task_failed` — Task execution failed
+
+### List Events
+- `list.created` — New list created
+- `list.updated` — List modified
+- `list.contact_added` — Contact added to list
+
+## Example Webhook Payload
+
+When an event occurs, we'll send a POST request to your webhook URL:
+
+```json
+{
+  "event": "contact.created",
+  "timestamp": "2026-02-24T10:00:00Z",
+  "workspace_id": "123e4567-e89b-12d3-a456-426614174000",
+  "data": {
+    "contact": {
+      "id": "789e0123-e45b-67c8-a901-234567890abc",
+      "full_name": "Jane Doe",
+      "email": "jane@example.com",
+      "created_at": "2026-02-24T10:00:00Z"
+    }
+  }
+}
+```
+
+## Security (HMAC Verification)
+
+Each webhook request will include a signature header for verification:
+
+```
+X-LeadLex-Signature: sha256=abc123...
+```
+
+You'll be able to verify the signature using your webhook secret:
+
+```python
+import hmac
+import hashlib
+
+def verify_webhook(payload, signature, secret):
+    expected = hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    
+    return hmac.compare_digest(f"sha256={expected}", signature)
+```
+
+## Retry Logic
+
+If your webhook endpoint is unavailable, we'll retry with exponential backoff:
+
+- **1st retry**: 5 seconds
+- **2nd retry**: 30 seconds
+- **3rd retry**: 5 minutes
+- **4th retry**: 1 hour
+- **5th retry**: 6 hours
+
+After 5 failed attempts, the webhook will be marked as failed and you'll receive an email notification.
+
+## Configuration (Coming Soon)
+
+When webhooks launch, you'll be able to configure them in your dashboard:
+
+1. Go to **Settings** → **API & Integrations** → **Webhooks**
+2. Click **Create Webhook**
+3. Enter your endpoint URL (must be HTTPS)
+4. Select which events to subscribe to
+5. Save and receive your webhook secret
+
+## Testing
+
+We'll provide a webhook testing interface where you can:
+- Send test payloads to your endpoint
+- View delivery logs and responses
+- Retry failed deliveries
+- Inspect request/response details
+
+## Notify Me When Ready
+
+Want to be notified when webhooks are available?
+
+<Card
+  title="Email Support"
+  icon="envelope"
+  href="mailto:support@leadlex.com?subject=Webhook%20Early%20Access"
+>
+  Email us at support@leadlex.com to join the early access list
+</Card>
+
+## Alternative: Polling
+
+Until webhooks are available, you can poll the API for updates:
+
+<CodeGroup>
+
+```python Python - Poll for New Contacts
+import requests
+import time
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+last_check = "2026-02-24T00:00:00Z"
+
+while True:
+    response = requests.get(
+        f"{BASE_URL}/v1/contacts",
+        headers={"Authorization": f"Bearer {API_KEY}"},
+        params={"created_after": last_check, "sort": "created_at"}
+    )
+    
+    contacts = response.json()["data"]["contacts"]
+    
+    if contacts:
+        print(f"Found {len(contacts)} new contacts")
+        for contact in contacts:
+            # Process new contact
+            print(f"  - {contact['full_name']}")
+        
+        # Update last check time
+        last_check = contacts[-1]["created_at"]
+    
+    # Wait 5 minutes before checking again
+    time.sleep(300)
+```
+
+```javascript JavaScript - Poll for Campaign Updates
+const API_KEY = 'wbk_your_api_key_here';
+const BASE_URL = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+
+let knownCampaigns = new Set();
+
+async function pollCampaigns() {
+  const response = await fetch(`${BASE_URL}/v1/campaigns`, {
+    headers: { 'Authorization': `Bearer ${API_KEY}` }
+  });
+  
+  const { data } = await response.json();
+  
+  for (const campaign of data.campaigns) {
+    if (!knownCampaigns.has(campaign.id)) {
+      console.log(`New campaign: ${campaign.name}`);
+      knownCampaigns.add(campaign.id);
+    }
+  }
+}
+
+// Poll every 5 minutes
+setInterval(pollCampaigns, 5 * 60 * 1000);
+```
+
+</CodeGroup>
+
+<Warning>
+  Be mindful of rate limits when polling. Polling too frequently can exhaust your daily quota.
+</Warning>
+
+## Questions?
+
+<Card
+  title="Contact Support"
+  icon="life-ring"
+  href="mailto:support@leadlex.com"
+>
+  Have questions about webhooks or need help with polling? Reach out to support@leadlex.com
+</Card>

@@ -1,0 +1,206 @@
+---
+title: "Create Contact"
+api: "POST /v1/contacts"
+description: "Add a new contact to your workspace"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+### Body Parameters
+
+<ParamField body="full_name" type="string" required>
+  Contact's full name
+</ParamField>
+
+<ParamField body="email" type="string">
+  Email address (recommended)
+</ParamField>
+
+<ParamField body="phone" type="string">
+  Phone number with country code
+</ParamField>
+
+<ParamField body="job_title" type="string">
+  Job title or position
+</ParamField>
+
+<ParamField body="company_name" type="string">
+  Company or organization name
+</ParamField>
+
+<ParamField body="linkedin_url" type="string">
+  LinkedIn profile URL
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Additional notes about the contact
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Array of tag strings for categorization
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The created contact object
+  <Expandable title="Contact object">
+    <ResponseField name="id" type="string">
+      Unique contact ID (UUID)
+    </ResponseField>
+    <ResponseField name="full_name" type="string">
+      Contact's full name
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      Email address
+    </ResponseField>
+    <ResponseField name="phone" type="string">
+      Phone number
+    </ResponseField>
+    <ResponseField name="job_title" type="string">
+      Job title
+    </ResponseField>
+    <ResponseField name="company_name" type="string">
+      Company name
+    </ResponseField>
+    <ResponseField name="linkedin_url" type="string">
+      LinkedIn URL
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+    <ResponseField name="updated_date" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "John Smith",
+    "email": "john@example.com",
+    "phone": "+1-555-0123",
+    "job_title": "CEO",
+    "company_name": "Tech Corp",
+    "linkedin_url": "https://linkedin.com/in/johnsmith"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "full_name": "John Smith",
+    "email": "john@example.com",
+    "job_title": "CEO",
+    "company_name": "Tech Corp"
+}
+
+response = requests.post(f"{BASE_URL}/v1/contacts", headers=headers, json=data)
+contact = response.json()["data"]
+print(f"Created contact: {contact['id']}")
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      full_name: 'John Smith',
+      email: 'john@example.com',
+      job_title: 'CEO',
+      company_name: 'Tech Corp'
+    })
+  }
+);
+
+const { data } = await response.json();
+console.log(`Created contact: ${data.id}`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "789e0123-e45b-67c8-a901-234567890abc",
+    "full_name": "John Smith",
+    "email": "john@example.com",
+    "phone": "+1-555-0123",
+    "job_title": "CEO",
+    "company_name": "Tech Corp",
+    "linkedin_url": "https://linkedin.com/in/johnsmith",
+    "notes": null,
+    "created_at": "2026-02-24T14:30:00Z",
+    "updated_date": "2026-02-24T14:30:00Z"
+  }
+}
+```
+
+## Validation
+
+<Warning>
+  If both `email` and `phone` are omitted, the API will return a validation error. At least one contact method is required.
+</Warning>
+
+### Duplicate Detection
+
+The API checks for duplicate contacts based on:
+- Exact email match (case-insensitive)
+- Exact phone number match
+
+If a duplicate is found, the existing contact will be returned instead of creating a new one.
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing required fields or invalid format |
+| 401 | `invalid_key` | Invalid API key |
+| 403 | `insufficient_permissions` | Missing `write` permission |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+### Example Validation Error
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Invalid request parameters",
+    "details": {
+      "fields": {
+        "full_name": "Required field",
+        "email": "Invalid email format"
+      }
+    }
+  }
+}
+```

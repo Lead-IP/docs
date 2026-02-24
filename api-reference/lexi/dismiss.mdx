@@ -1,0 +1,216 @@
+---
+title: "Dismiss Lexi Task"
+api: "POST /v1/lexi/tasks/:id/dismiss"
+description: "Dismiss a pending task (cancel without executing)"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Task UUID
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+### Body Parameters
+
+<ParamField body="reason" type="string">
+  Optional reason for dismissing the task (used for analytics)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="task_id" type="string">
+      Task UUID
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      New task status (`dismissed`)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks/task-uuid/dismiss \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "reason": "Not relevant right now"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+TASK_ID = "task-uuid"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "reason": "Not relevant right now"
+}
+
+response = requests.post(
+    f"{BASE_URL}/v1/lexi/tasks/{TASK_ID}/dismiss",
+    headers=headers,
+    json=data
+)
+
+result = response.json()["data"]
+print(f"Task dismissed: {result['status']}")
+```
+
+```javascript JavaScript
+const TASK_ID = 'task-uuid';
+
+const response = await fetch(
+  `https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks/${TASK_ID}/dismiss`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      reason: 'Not relevant right now'
+    })
+  }
+);
+
+const { data } = await response.json();
+console.log(`Task dismissed: ${data.status}`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "task_id": "task-uuid",
+    "status": "dismissed"
+  }
+}
+```
+
+## When to Dismiss Tasks
+
+Use dismiss when:
+- The task is no longer relevant
+- You want to do it manually instead
+- The task parameters are incorrect
+- You're testing and want to clean up pending tasks
+
+<Note>
+  Dismissed tasks cannot be re-approved. If you change your mind, ask Lexi to create a new task.
+</Note>
+
+## Dismiss Reasons (Analytics)
+
+Common reasons tracked for analytics:
+
+| Reason | Use Case |
+|--------|----------|
+| `not_relevant` | Task no longer needed |
+| `manual_execution` | Will do it manually |
+| `incorrect_params` | Wrong search criteria |
+| `duplicate` | Task already exists |
+| `testing` | Test/development task |
+
+## Example: Review and Dismiss Pattern
+
+```python
+# Get all pending tasks
+response = requests.get(
+    f"{BASE_URL}/v1/lexi/tasks",
+    headers=headers,
+    params={"status": "pending"}
+)
+
+tasks = response.json()["data"]["tasks"]
+
+for task in tasks:
+    print(f"\nTask: {task['description']}")
+    print(f"Type: {task['type']}")
+    print(f"Created: {task['created_at']}")
+    
+    # Prompt user for action
+    action = input("Approve (a), Dismiss (d), or Skip (s)? ")
+    
+    if action == 'a':
+        requests.post(
+            f"{BASE_URL}/v1/lexi/tasks/{task['id']}/approve",
+            headers=headers
+        )
+        print("✓ Approved")
+    elif action == 'd':
+        reason = input("Reason for dismissing? ")
+        requests.post(
+            f"{BASE_URL}/v1/lexi/tasks/{task['id']}/dismiss",
+            headers=headers,
+            json={"reason": reason}
+        )
+        print("✓ Dismissed")
+```
+
+## Bulk Dismiss
+
+Dismiss multiple tasks at once:
+
+```python
+def dismiss_all_pending_tasks():
+    """Dismiss all pending tasks (e.g., for cleanup)"""
+    response = requests.get(
+        f"{BASE_URL}/v1/lexi/tasks",
+        headers=headers,
+        params={"status": "pending"}
+    )
+    
+    tasks = response.json()["data"]["tasks"]
+    
+    for task in tasks:
+        requests.post(
+            f"{BASE_URL}/v1/lexi/tasks/{task['id']}/dismiss",
+            headers=headers,
+            json={"reason": "bulk_cleanup"}
+        )
+        print(f"Dismissed: {task['description']}")
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Task is not in `pending` status |
+| 401 | `invalid_key` | Invalid API key |
+| 403 | `insufficient_permissions` | Missing `lexi` permission |
+| 404 | `not_found` | Task not found |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+### Example Error (Already Dismissed)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Task has already been dismissed"
+  }
+}
+```

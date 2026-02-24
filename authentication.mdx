@@ -1,0 +1,283 @@
+---
+title: "Authentication"
+description: "Secure your API requests with workspace API keys"
+---
+
+## API Keys
+
+All API requests require authentication using a workspace API key. Keys are scoped to your workspace and can only access your own data.
+
+### Key Format
+
+API keys start with the `wbk_` prefix (workspace key):
+
+```
+wbk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
+```
+
+### Creating an API Key
+
+1. Go to [Dashboard](https://app.leadlex.com) → **Settings** → **API & Integrations**
+2. Click **Create API Key**
+3. Configure:
+   - **Name**: Descriptive name for the key
+   - **Permissions**: Select read, write, and/or Lexi access
+   - **Expiration**: Optional expiry date
+4. **Save the key immediately** — you won't see it again!
+
+<Warning>
+  Never commit API keys to version control or share them publicly. Treat them like passwords.
+</Warning>
+
+## Making Authenticated Requests
+
+Include your API key in the `Authorization` header using Bearer authentication:
+
+```bash
+Authorization: Bearer wbk_your_api_key_here
+```
+
+### Example
+
+<CodeGroup>
+
+```bash cURL
+curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/contacts", headers=headers)
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts',
+  {
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' }
+  }
+);
+```
+
+</CodeGroup>
+
+## Permissions
+
+API keys can have three types of permissions:
+
+<AccordionGroup>
+  <Accordion title="Read" icon="eye">
+    View contacts, lists, campaigns, deals, and prospect search results.
+    
+    **Endpoints:**
+    - `GET /v1/contacts`
+    - `GET /v1/lists`
+    - `GET /v1/campaigns`
+    - All GET endpoints
+  </Accordion>
+  
+  <Accordion title="Write" icon="pen-to-square">
+    Create, update, and delete contacts, lists, and campaigns.
+    
+    **Endpoints:**
+    - `POST /v1/contacts`
+    - `PATCH /v1/contacts/:id`
+    - `POST /v1/lists`
+    - `POST /v1/campaigns`
+    - All POST, PATCH, DELETE endpoints
+  </Accordion>
+  
+  <Accordion title="Lexi AI" icon="robot">
+    Interact with Lexi AI assistant, view and approve tasks.
+    
+    **Endpoints:**
+    - `POST /v1/lexi/chat`
+    - `GET /v1/lexi/tasks`
+    - `POST /v1/lexi/tasks/:id/approve`
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  For security, create separate keys with minimal permissions for different use cases (e.g., read-only key for analytics).
+</Tip>
+
+## Rate Limits
+
+API usage is limited based on your workspace plan:
+
+| Plan | Daily Limit | Per Minute |
+|------|-------------|------------|
+| **Starter** | 100 calls | 10 |
+| **Pro** | 1,000 calls | 50 |
+| **Org** | 10,000 calls | 200 |
+
+<Note>
+  Rate limits reset at midnight UTC (00:00).
+</Note>
+
+### Rate Limit Headers
+
+Every API response includes headers showing your current usage:
+
+```
+X-RateLimit-Limit: 1000        # Total daily limit
+X-RateLimit-Remaining: 847     # Calls remaining today
+X-RateLimit-Reset: 1708905600  # Unix timestamp of reset
+```
+
+### When You Hit the Limit
+
+If you exceed your rate limit, you'll receive a `429 Too Many Requests` error:
+
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Rate limit exceeded. Resets at 2026-02-25T00:00:00Z"
+  }
+}
+```
+
+**Status Code:** `429 Too Many Requests`
+
+<Tip>
+  Monitor the `X-RateLimit-Remaining` header and implement exponential backoff when approaching limits.
+</Tip>
+
+## Error Responses
+
+### Authentication Errors
+
+#### Missing Authorization Header
+
+```json
+{
+  "error": {
+    "code": "missing_auth",
+    "message": "Missing or invalid Authorization header"
+  }
+}
+```
+
+**Status Code:** `401 Unauthorized`
+
+#### Invalid API Key
+
+```json
+{
+  "error": {
+    "code": "invalid_key",
+    "message": "Invalid API key"
+  }
+}
+```
+
+**Status Code:** `401 Unauthorized`
+
+#### Revoked Key
+
+```json
+{
+  "error": {
+    "code": "revoked_key",
+    "message": "API key has been revoked"
+  }
+}
+```
+
+**Status Code:** `401 Unauthorized`
+
+#### Insufficient Permissions
+
+```json
+{
+  "error": {
+    "code": "insufficient_permissions",
+    "message": "Missing required permission: write"
+  }
+}
+```
+
+**Status Code:** `403 Forbidden`
+
+## Key Management
+
+### Rotating Keys
+
+To rotate an API key:
+
+1. **Create a new key** with the same permissions
+2. **Update your application** to use the new key
+3. **Test thoroughly** to ensure the new key works
+4. **Revoke the old key** in the dashboard
+
+<Warning>
+  Revoking a key immediately stops all API requests using that key. This cannot be undone.
+</Warning>
+
+### Monitoring Usage
+
+View API usage statistics in your dashboard:
+- **Total calls today**
+- **Calls per endpoint**
+- **Error rate**
+- **Last used timestamp**
+
+### Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Environment Variables" icon="code">
+    Store API keys in environment variables, never in code:
+    ```bash
+    export LEADLEX_API_KEY="wbk_your_key"
+    ```
+  </Card>
+  
+  <Card title="Rotate Regularly" icon="rotate">
+    Rotate keys every 90 days or when team members leave
+  </Card>
+  
+  <Card title="Minimal Permissions" icon="shield">
+    Only grant permissions that are actually needed
+  </Card>
+  
+  <Card title="Monitor Activity" icon="chart-line">
+    Check "Last Used" regularly to detect unused or leaked keys
+  </Card>
+</CardGroup>
+
+## Workspace Isolation
+
+<Note>
+  API keys are **workspace-scoped**. Each key can only access data within its own workspace. There is no cross-workspace access.
+</Note>
+
+This means:
+- You can only view/edit **your own contacts**
+- You can only create campaigns for **your own lists**
+- Lexi AI only has access to **your workspace data**
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart Guide"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Make your first API call
+  </Card>
+  <Card
+    title="Code Examples"
+    icon="code"
+    href="/examples"
+  >
+    Complete workflows in multiple languages
+  </Card>
+</CardGroup>

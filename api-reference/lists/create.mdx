@@ -1,0 +1,142 @@
+---
+title: "Create List"
+api: "POST /v1/lists"
+description: "Create a new contact list"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+### Body Parameters
+
+<ParamField body="name" type="string" required>
+  List name (must be unique within your workspace)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description of the list's purpose
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The created list object
+  <Expandable title="List properties">
+    <ResponseField name="id" type="string">
+      Unique list ID (UUID)
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      List name
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      List description
+    </ResponseField>
+    <ResponseField name="contact_count" type="integer">
+      Number of contacts (0 for new list)
+    </ResponseField>
+    <ResponseField name="created_at" type="string">
+      ISO 8601 timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lists \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Outreach Q2 2026",
+    "description": "Prospects for Q2 campaign"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "name": "Outreach Q2 2026",
+    "description": "Prospects for Q2 campaign"
+}
+
+response = requests.post(f"{BASE_URL}/v1/lists", headers=headers, json=data)
+new_list = response.json()["data"]
+print(f"Created list: {new_list['id']}")
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lists',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: 'Outreach Q2 2026',
+      description: 'Prospects for Q2 campaign'
+    })
+  }
+);
+
+const { data } = await response.json();
+console.log(`Created list: ${data.id}`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "xyz98765-4321-abcd-ef01-234567890xyz",
+    "name": "Outreach Q2 2026",
+    "description": "Prospects for Q2 campaign",
+    "contact_count": 0,
+    "created_at": "2026-02-24T15:30:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing required field or duplicate name |
+| 401 | `invalid_key` | Invalid API key |
+| 403 | `insufficient_permissions` | Missing `write` permission |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+### Example Error (Duplicate Name)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "A list with this name already exists",
+    "details": {
+      "fields": {
+        "name": "Must be unique"
+      }
+    }
+  }
+}
+```

@@ -1,0 +1,187 @@
+---
+title: "Add Contacts to List"
+api: "POST /v1/lists/:id/contacts"
+description: "Add one or more contacts to an existing list"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  List UUID
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+### Body Parameters
+
+<ParamField body="contact_ids" type="array" required>
+  Array of contact UUIDs to add to the list
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  Operation result
+  <Expandable title="properties">
+    <ResponseField name="added" type="integer">
+      Number of contacts successfully added
+    </ResponseField>
+    <ResponseField name="list_id" type="string">
+      The list UUID
+    </ResponseField>
+    <ResponseField name="contact_count" type="integer">
+      Total number of contacts now in the list
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lists/abc-123/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact_ids": [
+      "123e4567-e89b-12d3-a456-426614174000",
+      "789e0123-e45b-67c8-a901-234567890abc"
+    ]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+LIST_ID = "abc-123"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "contact_ids": [
+        "123e4567-e89b-12d3-a456-426614174000",
+        "789e0123-e45b-67c8-a901-234567890abc"
+    ]
+}
+
+response = requests.post(
+    f"{BASE_URL}/v1/lists/{LIST_ID}/contacts",
+    headers=headers,
+    json=data
+)
+
+result = response.json()["data"]
+print(f"Added {result['added']} contacts to list")
+```
+
+```javascript JavaScript
+const LIST_ID = 'abc-123';
+
+const response = await fetch(
+  `https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lists/${LIST_ID}/contacts`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contact_ids: [
+        '123e4567-e89b-12d3-a456-426614174000',
+        '789e0123-e45b-67c8-a901-234567890abc'
+      ]
+    })
+  }
+);
+
+const { data } = await response.json();
+console.log(`Added ${data.added} contacts`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "added": 2,
+    "list_id": "abc12345-678d-90ef-1234-567890abcdef",
+    "contact_count": 47
+  }
+}
+```
+
+## Duplicate Handling
+
+<Note>
+  If a contact is already in the list, it will be silently skipped (not an error). The `added` count reflects only newly added contacts.
+</Note>
+
+### Example with Duplicates
+
+If you try to add 5 contacts but 2 are already in the list:
+
+```json
+{
+  "data": {
+    "added": 3,
+    "list_id": "abc-123",
+    "contact_count": 50
+  }
+}
+```
+
+## Bulk Operations
+
+You can add up to 100 contacts in a single request:
+
+```python
+# Add 100 contacts at once
+contact_ids = [...]  # List of up to 100 UUIDs
+response = requests.post(
+    f"{BASE_URL}/v1/lists/{LIST_ID}/contacts",
+    headers=headers,
+    json={"contact_ids": contact_ids}
+)
+```
+
+<Warning>
+  Requests with more than 100 contact IDs will be rejected with a validation error.
+</Warning>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Invalid contact IDs or exceeds 100 limit |
+| 401 | `invalid_key` | Invalid API key |
+| 403 | `insufficient_permissions` | Missing `write` permission |
+| 404 | `not_found` | List not found or not in your workspace |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+### Example Error (Invalid Contact ID)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "One or more contact IDs are invalid or not in your workspace",
+    "details": {
+      "invalid_ids": ["not-a-real-uuid"]
+    }
+  }
+}
+```

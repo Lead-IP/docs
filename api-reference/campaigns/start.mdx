@@ -1,0 +1,181 @@
+---
+title: "Start Campaign"
+api: "POST /v1/campaigns/:id/start"
+description: "Launch a campaign (sends to Lexi AI for approval)"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Campaign UUID
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="campaign_id" type="string">
+      Campaign UUID
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      New campaign status (`pending_approval` or `active`)
+    </ResponseField>
+    <ResponseField name="task_id" type="string">
+      Lexi AI task UUID (if approval required)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/campaigns/campaign-uuid/start \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+CAMPAIGN_ID = "campaign-uuid"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+response = requests.post(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/start",
+    headers=headers
+)
+
+result = response.json()["data"]
+if result["status"] == "pending_approval":
+    print(f"Campaign sent to Lexi for approval: {result['task_id']}")
+else:
+    print("Campaign started!")
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'campaign-uuid';
+
+const response = await fetch(
+  `https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/start`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    }
+  }
+);
+
+const { data } = await response.json();
+if (data.status === 'pending_approval') {
+  console.log(`Campaign sent to Lexi: ${data.task_id}`);
+} else {
+  console.log('Campaign started!');
+}
+```
+
+</CodeGroup>
+
+### Example Response (Approval Required)
+
+```json
+{
+  "data": {
+    "campaign_id": "campaign-uuid",
+    "status": "pending_approval",
+    "task_id": "lexi-task-uuid"
+  }
+}
+```
+
+### Example Response (Auto-Started)
+
+```json
+{
+  "data": {
+    "campaign_id": "campaign-uuid",
+    "status": "active",
+    "task_id": null
+  }
+}
+```
+
+## Approval Workflow
+
+When a campaign requires approval:
+
+1. **Start the campaign** → status becomes `pending_approval`
+2. **Lexi reviews** the campaign (template, target list, timing)
+3. **You approve or dismiss** via the [Lexi tasks endpoints](/api-reference/lexi/tasks)
+4. **Campaign launches** after approval
+
+### Check Approval Status
+
+```python
+# Poll for task status
+tasks_response = requests.get(
+    f"{BASE_URL}/v1/lexi/tasks",
+    headers=headers,
+    params={"status": "pending"}
+)
+tasks = tasks_response.json()["data"]["tasks"]
+
+for task in tasks:
+    if task["type"] == "campaign_start":
+        print(f"Campaign {task['metadata']['campaign_id']} awaiting approval")
+```
+
+### Approve the Campaign
+
+```python
+# Approve the task to launch the campaign
+task_id = "lexi-task-uuid"
+requests.post(
+    f"{BASE_URL}/v1/lexi/tasks/{task_id}/approve",
+    headers=headers
+)
+print("Campaign approved and launching!")
+```
+
+## Auto-Start vs Manual Approval
+
+<Note>
+  Whether a campaign requires Lexi approval depends on your workspace settings. By default, campaigns with >100 recipients require approval.
+</Note>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Campaign is empty or already running |
+| 401 | `invalid_key` | Invalid API key |
+| 403 | `insufficient_permissions` | Missing `write` permission |
+| 404 | `not_found` | Campaign not found |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+### Example Error (Campaign Already Running)
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "Campaign is already active"
+  }
+}
+```

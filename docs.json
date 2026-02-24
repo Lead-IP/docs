@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "LeadLex API Documentation",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#f97316",
+    "light": "#fb923c",
+    "dark": "#ea580c"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -14,55 +14,64 @@
         "tab": "Guides",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart",
-              "development"
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "authentication",
+              "webhooks",
+              "examples"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Contacts",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/contacts/list",
+              "api-reference/contacts/create",
+              "api-reference/contacts/get",
+              "api-reference/contacts/update"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Lists",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/lists/list",
+              "api-reference/lists/create",
+              "api-reference/lists/add-contacts"
+            ]
+          },
+          {
+            "group": "Prospects",
+            "pages": [
+              "api-reference/prospects/search",
+              "api-reference/prospects/save"
+            ]
+          },
+          {
+            "group": "Campaigns",
+            "pages": [
+              "api-reference/campaigns/list",
+              "api-reference/campaigns/create",
+              "api-reference/campaigns/start"
+            ]
+          },
+          {
+            "group": "Lexi AI",
+            "pages": [
+              "api-reference/lexi/chat",
+              "api-reference/lexi/tasks",
+              "api-reference/lexi/approve",
+              "api-reference/lexi/dismiss"
             ]
           }
         ]
@@ -71,14 +80,14 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "Website",
+          "href": "https://leadlex.com",
+          "icon": "globe"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Support",
+          "href": "mailto:support@leadlex.com",
+          "icon": "envelope"
         }
       ]
     }
@@ -91,32 +100,27 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@leadlex.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "href": "https://app.leadlex.com"
     }
   },
   "contextual": {
     "options": [
      "copy",
-     "view",
      "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
+     "claude"
    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "x": "https://x.com/leadlex",
+      "github": "https://github.com/Lead-IP",
+      "linkedin": "https://linkedin.com/company/leadlex"
     }
   }
 }

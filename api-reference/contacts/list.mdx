@@ -1,0 +1,196 @@
+---
+title: "List Contacts"
+api: "GET /v1/contacts"
+description: "Retrieve a paginated list of contacts in your workspace"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Number of contacts per page (max: 100)
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search by name or email (partial match)
+</ParamField>
+
+<ParamField query="list_id" type="string">
+  Filter by list membership (UUID)
+</ParamField>
+
+<ParamField query="created_after" type="string">
+  Filter contacts created after this date (ISO 8601 format)
+</ParamField>
+
+<ParamField query="sort" type="string" default="created_at">
+  Sort field: `created_at`, `updated_date`, `full_name`  
+  Prefix with `-` for descending order (e.g., `-created_at`)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="contacts" type="array">
+      Array of contact objects
+      <Expandable title="Contact object">
+        <ResponseField name="id" type="string">
+          Unique contact ID (UUID)
+        </ResponseField>
+        <ResponseField name="full_name" type="string">
+          Contact's full name
+        </ResponseField>
+        <ResponseField name="email" type="string">
+          Email address
+        </ResponseField>
+        <ResponseField name="phone" type="string">
+          Phone number
+        </ResponseField>
+        <ResponseField name="job_title" type="string">
+          Job title or position
+        </ResponseField>
+        <ResponseField name="company_name" type="string">
+          Company name
+        </ResponseField>
+        <ResponseField name="linkedin_url" type="string">
+          LinkedIn profile URL
+        </ResponseField>
+        <ResponseField name="created_at" type="string">
+          ISO 8601 timestamp
+        </ResponseField>
+        <ResponseField name="updated_date" type="string">
+          ISO 8601 timestamp of last update
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+  <Expandable title="properties">
+    <ResponseField name="page" type="integer">
+      Current page number
+    </ResponseField>
+    <ResponseField name="per_page" type="integer">
+      Contacts per page
+    </ResponseField>
+    <ResponseField name="total" type="integer">
+      Total number of contacts matching the query
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/contacts", headers=headers)
+contacts = response.json()["data"]["contacts"]
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts',
+  {
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' }
+  }
+);
+const { data } = await response.json();
+console.log(data.contacts);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "contacts": [
+      {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "full_name": "Jane Doe",
+        "email": "jane@example.com",
+        "phone": "+1234567890",
+        "job_title": "General Counsel",
+        "company_name": "Acme Legal",
+        "linkedin_url": "https://linkedin.com/in/janedoe",
+        "created_at": "2026-02-24T10:00:00Z",
+        "updated_date": "2026-02-24T10:00:00Z"
+      }
+    ]
+  },
+  "meta": {
+    "page": 1,
+    "per_page": 50,
+    "total": 235
+  }
+}
+```
+
+## Examples
+
+### Search by Name
+
+```bash
+curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts?search=jane" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+### Filter by List
+
+```bash
+curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts?list_id=abc-123" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+### Sort by Name (Ascending)
+
+```bash
+curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts?sort=full_name" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+## Errors
+
+<ResponseField name="error" type="object">
+  <Expandable title="Error object">
+    <ResponseField name="code" type="string">
+      Error code (e.g., `invalid_key`, `rate_limited`)
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      Human-readable error message
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Common Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

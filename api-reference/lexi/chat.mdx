@@ -1,0 +1,230 @@
+---
+title: "Chat with Lexi"
+api: "POST /v1/lexi/chat"
+description: "Send a message to Lexi AI and get a response"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+### Body Parameters
+
+<ParamField body="message" type="string" required>
+  Your message to Lexi
+</ParamField>
+
+<ParamField body="context" type="object">
+  Optional context to help Lexi understand the request
+  <Expandable title="Context fields">
+    <ParamField body="list_id" type="string">
+      Related list UUID
+    </ParamField>
+    <ParamField body="campaign_id" type="string">
+      Related campaign UUID
+    </ParamField>
+    <ParamField body="conversation_id" type="string">
+      Continue an existing conversation
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="response" type="string">
+      Lexi's text response
+    </ResponseField>
+    <ResponseField name="task_id" type="string">
+      Task UUID (if Lexi created a task requiring approval)
+    </ResponseField>
+    <ResponseField name="requires_approval" type="boolean">
+      Whether the task needs your approval before execution
+    </ResponseField>
+    <ResponseField name="conversation_id" type="string">
+      Conversation UUID for follow-up messages
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/chat \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Find me 20 CEOs at law firms in New York",
+    "context": {
+      "list_id": "list-uuid"
+    }
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "message": "Find me 20 CEOs at law firms in New York",
+    "context": {
+        "list_id": "list-uuid"
+    }
+}
+
+response = requests.post(f"{BASE_URL}/v1/lexi/chat", headers=headers, json=data)
+result = response.json()["data"]
+
+print(f"Lexi: {result['response']}")
+if result.get("requires_approval"):
+    print(f"Task created: {result['task_id']}")
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/chat',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: 'Find me 20 CEOs at law firms in New York',
+      context: {
+        list_id: 'list-uuid'
+      }
+    })
+  }
+);
+
+const { data } = await response.json();
+console.log(`Lexi: ${data.response}`);
+if (data.requires_approval) {
+  console.log(`Task created: ${data.task_id}`);
+}
+```
+
+</CodeGroup>
+
+### Example Response (No Approval Required)
+
+```json
+{
+  "data": {
+    "response": "I found 20 CEOs at law firms in New York. I've added them to your list.",
+    "task_id": null,
+    "requires_approval": false,
+    "conversation_id": "conv-uuid"
+  }
+}
+```
+
+### Example Response (Approval Required)
+
+```json
+{
+  "data": {
+    "response": "I'll search for 20 CEOs at law firms in New York and add them to your list. Please approve this task to proceed.",
+    "task_id": "task-uuid",
+    "requires_approval": true,
+    "conversation_id": "conv-uuid"
+  }
+}
+```
+
+## Example Prompts
+
+### Prospect Search
+
+```json
+{
+  "message": "Find CTOs at SaaS companies with 50-200 employees in California"
+}
+```
+
+### Campaign Creation
+
+```json
+{
+  "message": "Create an outreach campaign for my 'Q1 Leads' list about legal automation",
+  "context": {
+    "list_id": "list-uuid"
+  }
+}
+```
+
+### Follow-up Question
+
+```json
+{
+  "message": "Can you make the email more casual?",
+  "context": {
+    "conversation_id": "conv-uuid"
+  }
+}
+```
+
+## Conversation Threading
+
+<Tip>
+  Use `conversation_id` to continue a conversation. Lexi will remember the context from previous messages.
+</Tip>
+
+```python
+# First message
+response1 = client.chat_with_lexi("Find CEOs at law firms")
+conv_id = response1["conversation_id"]
+
+# Follow-up (Lexi remembers we're talking about CEOs at law firms)
+response2 = client.chat_with_lexi(
+    "Filter to only New York",
+    context={"conversation_id": conv_id}
+)
+```
+
+## Rate Limiting & Credits
+
+<Warning>
+  **Lexi chat calls deduct from your workspace's AI credit balance** in addition to counting toward API rate limits.
+</Warning>
+
+- **1 credit per message**
+- **5 credits for prospect search tasks**
+
+If credits run out, you'll receive a `402 Payment Required` error.
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing message parameter |
+| 401 | `invalid_key` | Invalid API key |
+| 402 | `insufficient_credits` | No Lexi credits remaining |
+| 403 | `insufficient_permissions` | Missing `lexi` permission |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+### Example Credit Error
+
+```json
+{
+  "error": {
+    "code": "insufficient_credits",
+    "message": "Your workspace has no Lexi credits remaining"
+  }
+}
+```

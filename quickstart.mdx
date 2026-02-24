@@ -1,80 +1,227 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get started with the LeadLex API in 5 minutes"
 ---
 
-## Get started in three steps
+## Get Your API Key
 
-Get your documentation site running locally and make your first customization.
+1. Log in to your [LeadLex Dashboard](https://app.leadlex.com)
+2. Navigate to **Settings** → **API & Integrations**
+3. Click **Create API Key**
+4. Give your key a name (e.g., "My Bot")
+5. Select permissions:
+   - **Read**: View contacts, lists, campaigns
+   - **Write**: Create and update data
+   - **Lexi**: Interact with Lexi AI
+6. Click **Create**
 
-### Step 1: Set up your local environment
+<Warning>
+  **Save your API key immediately!** You won't be able to see it again after closing the dialog.
+</Warning>
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Your API key will start with `wbk_` (workspace key) and look like this:
 
-### Step 2: Deploy your changes
+```
+wbk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
+```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+## Make Your First Request
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+Let's list your contacts using cURL:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+<CodeGroup>
 
-### Step 3: Go live
+```bash cURL
+curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```python Python
+import requests
 
-## Next steps
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
 
-Now that you have your docs running, explore these key features:
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/contacts", headers=headers)
+
+if response.status_code == 200:
+    data = response.json()
+    print(f"Found {len(data['data']['contacts'])} contacts")
+else:
+    print(f"Error: {response.json()['error']['message']}")
+```
+
+```javascript JavaScript
+const API_KEY = 'wbk_your_api_key_here';
+const BASE_URL = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+
+async function listContacts() {
+  const response = await fetch(`${BASE_URL}/v1/contacts`, {
+    headers: { 'Authorization': `Bearer ${API_KEY}` }
+  });
+  
+  if (response.ok) {
+    const data = await response.json();
+    console.log(`Found ${data.data.contacts.length} contacts`);
+  } else {
+    const error = await response.json();
+    console.error(`Error: ${error.error.message}`);
+  }
+}
+
+listContacts();
+```
+
+</CodeGroup>
+
+## Expected Response
+
+```json
+{
+  "data": {
+    "contacts": [
+      {
+        "id": "123e4567-e89b-12d3-a456-426614174000",
+        "full_name": "Jane Doe",
+        "email": "jane@example.com",
+        "phone": "+1234567890",
+        "job_title": "General Counsel",
+        "company_name": "Acme Legal",
+        "created_at": "2026-02-24T10:00:00Z"
+      }
+    ]
+  },
+  "meta": {
+    "page": 1,
+    "per_page": 50,
+    "total": 1
+  }
+}
+```
+
+## Create a Contact
+
+Now let's create a new contact:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "full_name": "John Smith",
+    "email": "john@example.com",
+    "job_title": "CEO",
+    "company_name": "Tech Corp"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "full_name": "John Smith",
+    "email": "john@example.com",
+    "job_title": "CEO",
+    "company_name": "Tech Corp"
+}
+
+response = requests.post(f"{BASE_URL}/v1/contacts", headers=headers, json=data)
+
+if response.status_code == 200:
+    contact = response.json()["data"]
+    print(f"Created contact: {contact['id']}")
+else:
+    print(f"Error: {response.json()['error']['message']}")
+```
+
+```javascript JavaScript
+const API_KEY = 'wbk_your_api_key_here';
+const BASE_URL = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+
+async function createContact() {
+  const response = await fetch(`${BASE_URL}/v1/contacts`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      full_name: 'John Smith',
+      email: 'john@example.com',
+      job_title: 'CEO',
+      company_name: 'Tech Corp'
+    })
+  });
+  
+  if (response.ok) {
+    const data = await response.json();
+    console.log(`Created contact: ${data.data.id}`);
+  } else {
+    const error = await response.json();
+    console.error(`Error: ${error.error.message}`);
+  }
+}
+
+createContact();
+```
+
+</CodeGroup>
+
+## Check Rate Limits
+
+Every API response includes rate limit headers:
+
+```
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 995
+X-RateLimit-Reset: 1708905600
+```
+
+<Tip>
+  Rate limits reset at midnight UTC. Check the `X-RateLimit-Remaining` header to track your usage.
+</Tip>
+
+## Next Steps
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card
+    title="Authentication"
+    icon="key"
+    href="/authentication"
+  >
+    Learn about API keys, permissions, and rate limits
+  </Card>
+  <Card
+    title="Code Examples"
+    icon="code"
+    href="/examples"
+  >
+    Complete workflows for common use cases
+  </Card>
+  <Card
+    title="API Reference"
+    icon="book"
+    href="/api-reference/contacts/list"
+  >
+    Browse all available endpoints
+  </Card>
+  <Card
+    title="Webhooks"
+    icon="webhook"
+    href="/webhooks"
+  >
+    Get notified when events occur in your workspace
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
