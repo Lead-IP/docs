@@ -1,11 +1,11 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "LeadLex API Documentation",
+  "name": "LeadLex",
   "colors": {
-    "primary": "#f97316",
-    "light": "#fb923c",
-    "dark": "#ea580c"
+    "primary": "#001ce0",
+    "light": "#e3f307",
+    "dark": "#001ce0"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -94,7 +94,8 @@
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "https://leadlex.com"
   },
   "navbar": {
     "links": [
@@ -111,10 +112,10 @@
   },
   "contextual": {
     "options": [
-     "copy",
-     "chatgpt",
-     "claude"
-   ]
+      "copy",
+      "chatgpt",
+      "claude"
+    ]
   },
   "footer": {
     "socials": {
