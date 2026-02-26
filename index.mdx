@@ -64,7 +64,7 @@ All API requests require an API key. Learn how to create and manage your keys:
 ## Base URL
 
 ```
-https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway
+https://data.leadlex.com/functions/v1/api-gateway
 ```
 
 All endpoints are prefixed with `/v1/`.
@@ -74,7 +74,7 @@ All endpoints are prefixed with `/v1/`.
 <CodeGroup>
 
 ```bash cURL
-curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/contacts \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
@@ -82,7 +82,7 @@ curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contac
 import requests
 
 API_KEY = "wbk_your_api_key_here"
-BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}"}
 response = requests.get(f"{BASE_URL}/v1/contacts", headers=headers)
@@ -91,7 +91,7 @@ contacts = response.json()["data"]["contacts"]
 
 ```javascript JavaScript
 const API_KEY = 'wbk_your_api_key_here';
-const BASE_URL = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+const BASE_URL = 'https://data.leadlex.com/functions/v1/api-gateway';
 
 const response = await fetch(`${BASE_URL}/v1/contacts`, {
   headers: { 'Authorization': `Bearer ${API_KEY}` }

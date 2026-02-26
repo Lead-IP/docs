@@ -21,7 +21,7 @@ This example shows a complete end-to-end automation:
     class LeadLexClient:
         def __init__(self, api_key: str):
             self.api_key = api_key
-            self.base_url = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+            self.base_url = "https://data.leadlex.com/functions/v1/api-gateway"
             self.session = requests.Session()
             self.session.headers.update({"Authorization": f"Bearer {api_key}"})
         
@@ -115,7 +115,7 @@ This example shows a complete end-to-end automation:
     class LeadLexClient {
       constructor(apiKey) {
         this.apiKey = apiKey;
-        this.baseUrl = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+        this.baseUrl = 'https://data.leadlex.com/functions/v1/api-gateway';
       }
 
       async request(method, path, options = {}) {
@@ -228,7 +228,7 @@ This example shows a complete end-to-end automation:
 
     ```bash
     curl -X POST \
-      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/prospects/search \
+      https://data.leadlex.com/functions/v1/api-gateway/v1/prospects/search \
       -H "Authorization: Bearer wbk_your_api_key_here" \
       -H "Content-Type: application/json" \
       -d '{
@@ -245,7 +245,7 @@ This example shows a complete end-to-end automation:
 
     ```bash
     curl -X POST \
-      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lists \
+      https://data.leadlex.com/functions/v1/api-gateway/v1/lists \
       -H "Authorization: Bearer wbk_your_api_key_here" \
       -H "Content-Type: application/json" \
       -d '{
@@ -258,7 +258,7 @@ This example shows a complete end-to-end automation:
 
     ```bash
     curl -X POST \
-      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/prospects/save \
+      https://data.leadlex.com/functions/v1/api-gateway/v1/prospects/save \
       -H "Authorization: Bearer wbk_your_api_key_here" \
       -H "Content-Type: application/json" \
       -d '{
@@ -278,7 +278,7 @@ This example shows a complete end-to-end automation:
 
     ```bash
     curl -X POST \
-      https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/chat \
+      https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/chat \
       -H "Authorization: Bearer wbk_your_api_key_here" \
       -H "Content-Type: application/json" \
       -d '{

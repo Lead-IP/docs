@@ -96,7 +96,7 @@ Authorization: Bearer wbk_your_api_key_here
 <CodeGroup>
 
 ```bash cURL
-curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/contacts \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
@@ -104,7 +104,7 @@ curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contac
 import requests
 
 API_KEY = "wbk_your_api_key_here"
-BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}"}
 response = requests.get(f"{BASE_URL}/v1/contacts", headers=headers)
@@ -113,7 +113,7 @@ contacts = response.json()["data"]["contacts"]
 
 ```javascript JavaScript
 const response = await fetch(
-  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts',
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts',
   {
     headers: { 'Authorization': 'Bearer wbk_your_api_key_here' }
   }
@@ -156,21 +156,21 @@ console.log(data.contacts);
 ### Search by Name
 
 ```bash
-curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts?search=jane" \
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/contacts?search=jane" \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
 ### Filter by List
 
 ```bash
-curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts?list_id=abc-123" \
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/contacts?list_id=abc-123" \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
 ### Sort by Name (Ascending)
 
 ```bash
-curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts?sort=full_name" \
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/contacts?sort=full_name" \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 

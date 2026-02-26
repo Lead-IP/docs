@@ -32,7 +32,7 @@ Let's list your contacts using cURL:
 <CodeGroup>
 
 ```bash cURL
-curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/contacts \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
@@ -40,7 +40,7 @@ curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contac
 import requests
 
 API_KEY = "wbk_your_api_key_here"
-BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}"}
 response = requests.get(f"{BASE_URL}/v1/contacts", headers=headers)
@@ -54,7 +54,7 @@ else:
 
 ```javascript JavaScript
 const API_KEY = 'wbk_your_api_key_here';
-const BASE_URL = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+const BASE_URL = 'https://data.leadlex.com/functions/v1/api-gateway';
 
 async function listContacts() {
   const response = await fetch(`${BASE_URL}/v1/contacts`, {
@@ -108,7 +108,7 @@ Now let's create a new contact:
 
 ```bash cURL
 curl -X POST \
-  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/contacts \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/contacts \
   -H "Authorization: Bearer wbk_your_api_key_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -123,7 +123,7 @@ curl -X POST \
 import requests
 
 API_KEY = "wbk_your_api_key_here"
-BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {
     "Authorization": f"Bearer {API_KEY}",
@@ -148,7 +148,7 @@ else:
 
 ```javascript JavaScript
 const API_KEY = 'wbk_your_api_key_here';
-const BASE_URL = 'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway';
+const BASE_URL = 'https://data.leadlex.com/functions/v1/api-gateway';
 
 async function createContact() {
   const response = await fetch(`${BASE_URL}/v1/contacts`, {

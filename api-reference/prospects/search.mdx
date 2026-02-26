@@ -93,7 +93,7 @@ Content-Type: application/json
 
 ```bash cURL
 curl -X POST \
-  https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/prospects/search \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/prospects/search \
   -H "Authorization: Bearer wbk_your_api_key_here" \
   -H "Content-Type: application/json" \
   -d '{
@@ -111,7 +111,7 @@ curl -X POST \
 import requests
 
 API_KEY = "wbk_your_api_key_here"
-BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {
     "Authorization": f"Bearer {API_KEY}",
@@ -135,7 +135,7 @@ print(f"Found {len(prospects)} prospects")
 
 ```javascript JavaScript
 const response = await fetch(
-  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/prospects/search',
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/prospects/search',
   {
     method: 'POST',
     headers: {

@@ -13,7 +13,7 @@ The LeadLex API enables developers to:
 ## Base URL
 
 ```
-https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway
+https://data.leadlex.com/functions/v1/api-gateway
 ```
 
 ## Authentication

@@ -51,7 +51,7 @@ Authorization: Bearer wbk_your_api_key_here
 <CodeGroup>
 
 ```bash cURL
-curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks \
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/tasks \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
@@ -59,7 +59,7 @@ curl https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/t
 import requests
 
 API_KEY = "wbk_your_api_key_here"
-BASE_URL = "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}"}
 response = requests.get(f"{BASE_URL}/v1/lexi/tasks", headers=headers)
@@ -71,7 +71,7 @@ for task in tasks:
 
 ```javascript JavaScript
 const response = await fetch(
-  'https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks',
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/tasks',
   {
     headers: { 'Authorization': 'Bearer wbk_your_api_key_here' }
   }
@@ -127,14 +127,14 @@ data.tasks.forEach(task => {
 ### Get Only Pending Tasks
 
 ```bash
-curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks?status=pending" \
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/tasks?status=pending" \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
 ### Get Approved Tasks
 
 ```bash
-curl "https://nbkxaqxwvkgbddekwsma.supabase.co/functions/v1/api-gateway/v1/lexi/tasks?status=approved" \
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/tasks?status=approved" \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
