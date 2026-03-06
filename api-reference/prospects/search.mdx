@@ -1,8 +1,12 @@
 ---
-title: "Search Prospects"
+title: "Search Prospects (Legacy)"
 api: "POST /v1/prospects/search"
-description: "Search for prospects using advanced filters"
+description: "Search for prospects — legacy endpoint. Prefer /v1/prospector/search for full filter support."
 ---
+
+<Warning>
+  This is a **legacy endpoint**. It accepts the old `query` format but internally forwards to [`/v1/prospector/search`](/api-reference/prospector/search). We recommend using `/v1/prospector/search` directly for access to all 15+ filter types.
+</Warning>
 
 ## Request
 
@@ -15,95 +19,99 @@ Content-Type: application/json
 
 ### Body Parameters
 
-<ParamField body="query" type="object" required>
-  Search query object with filters
-  <Expandable title="Query fields">
-    <ParamField body="person_titles" type="array">
-      Job titles to search for (e.g., `["CEO", "CTO", "Founder"]`)
-    </ParamField>
-    <ParamField body="person_locations" type="array">
-      Locations (e.g., `["United States", "United Kingdom"]`)
-    </ParamField>
-    <ParamField body="organization_industries" type="array">
-      Industry categories (e.g., `["Legal", "Technology"]`)
-    </ParamField>
-    <ParamField body="organization_num_employees_ranges" type="array">
-      Company size ranges: `["1-10", "11-50", "51-200", "201-500", "501-1000", "1001+"]`
-    </ParamField>
-  </Expandable>
+This endpoint accepts either the **new format** (recommended) or the **legacy format**.
+
+#### New Format (recommended)
+
+Uses the same parameters as [`/v1/prospector/search`](/api-reference/prospector/search):
+
+<ParamField body="titles" type="array">
+  Job titles to search for (e.g., `["CEO", "General Counsel"]`)
+</ParamField>
+
+<ParamField body="location" type="array">
+  Person locations (e.g., `["United States", "United Kingdom"]`)
+</ParamField>
+
+<ParamField body="industry" type="array">
+  Industry filters (e.g., `["Legal Services", "Technology"]`)
+</ParamField>
+
+<ParamField body="headcount" type="array">
+  Company size ranges (e.g., `["51-200", "201-500"]`)
 </ParamField>
 
 <ParamField body="page" type="integer" default="1">
   Page number for pagination
 </ParamField>
 
-<ParamField body="per_page" type="integer" default="25">
-  Results per page (max: 100)
+See [`/v1/prospector/search`](/api-reference/prospector/search) for all available filters including seniority, departments, funding, revenue, company domains, and more.
+
+#### Legacy Format (deprecated)
+
+<ParamField body="query" type="string">
+  A search string — will be treated as a job title search.
+</ParamField>
+
+<ParamField body="jobTitles" type="array">
+  Job titles — mapped to `titles` internally.
 </ParamField>
 
 ## Response
 
+Same response format as [`/v1/prospector/search`](/api-reference/prospector/search).
+
 <ResponseField name="data" type="object">
   <Expandable title="properties">
-    <ResponseField name="prospects" type="array">
-      Array of prospect objects
+    <ResponseField name="results" type="array">
       <Expandable title="Prospect object">
-        <ResponseField name="id" type="string">
-          Prospect ID from data provider
-        </ResponseField>
-        <ResponseField name="name" type="string">
-          Full name
-        </ResponseField>
-        <ResponseField name="title" type="string">
-          Job title
-        </ResponseField>
-        <ResponseField name="email" type="string">
-          Email address (may be null)
-        </ResponseField>
-        <ResponseField name="company" type="string">
-          Company name
-        </ResponseField>
-        <ResponseField name="location" type="string">
-          Location (city, state/country)
-        </ResponseField>
-        <ResponseField name="linkedin_url" type="string">
-          LinkedIn profile URL
-        </ResponseField>
+        <ResponseField name="full_name" type="string">Full name</ResponseField>
+        <ResponseField name="first_name" type="string">First name</ResponseField>
+        <ResponseField name="last_name" type="string">Last name</ResponseField>
+        <ResponseField name="job_title" type="string">Job title</ResponseField>
+        <ResponseField name="linkedin_url" type="string">LinkedIn URL</ResponseField>
+        <ResponseField name="location" type="string">Location</ResponseField>
+        <ResponseField name="email_available" type="boolean">Whether email can be revealed</ResponseField>
+        <ResponseField name="phone_available" type="boolean">Whether phone can be revealed</ResponseField>
+        <ResponseField name="company" type="string">Company name</ResponseField>
+        <ResponseField name="company_domain" type="string">Company domain</ResponseField>
+        <ResponseField name="company_size" type="string">Company size range</ResponseField>
+        <ResponseField name="company_industry" type="string">Company industry</ResponseField>
+        <ResponseField name="member_id" type="string">Member ID (use for reveal)</ResponseField>
+        <ResponseField name="company_id" type="string">Company ID (use for reveal)</ResponseField>
       </Expandable>
     </ResponseField>
-  </Expandable>
-</ResponseField>
-
-<ResponseField name="meta" type="object">
-  Pagination metadata
-  <Expandable title="properties">
-    <ResponseField name="page" type="integer">
-      Current page
-    </ResponseField>
-    <ResponseField name="per_page" type="integer">
-      Results per page
-    </ResponseField>
-    <ResponseField name="total" type="integer">
-      Total matching prospects
+    <ResponseField name="pagination" type="object">
+      <Expandable title="properties">
+        <ResponseField name="page" type="integer">Current page</ResponseField>
+        <ResponseField name="per_page" type="integer">Results per page</ResponseField>
+        <ResponseField name="total" type="integer">Total results</ResponseField>
+        <ResponseField name="total_pages" type="integer">Total pages</ResponseField>
+      </Expandable>
     </ResponseField>
   </Expandable>
 </ResponseField>
 
 <CodeGroup>
 
-```bash cURL
-curl -X POST \
-  https://data.leadlex.com/functions/v1/api-gateway/v1/prospects/search \
+```bash cURL (new format)
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/prospects/search \
   -H "Authorization: Bearer wbk_your_api_key_here" \
   -H "Content-Type: application/json" \
   -d '{
-    "query": {
-      "person_titles": ["CEO", "Chief Executive Officer"],
-      "organization_industries": ["Legal"],
-      "person_locations": ["United States"],
-      "organization_num_employees_ranges": ["11-50", "51-200"]
-    },
-    "per_page": 50
+    "titles": ["CEO", "Chief Executive Officer"],
+    "industry": ["Legal Services"],
+    "location": ["United States"],
+    "headcount": ["11-50", "51-200"]
+  }'
+```
+
+```bash cURL (legacy format)
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/prospects/search \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jobTitles": ["CEO", "Chief Executive Officer"]
   }'
 ```
 
@@ -113,24 +121,16 @@ import requests
 API_KEY = "wbk_your_api_key_here"
 BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
-headers = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Content-Type": "application/json"
-}
-
-data = {
-    "query": {
-        "person_titles": ["CEO", "Chief Executive Officer"],
-        "organization_industries": ["Legal"],
-        "person_locations": ["United States"],
-        "organization_num_employees_ranges": ["11-50", "51-200"]
-    },
-    "per_page": 50
-}
-
-response = requests.post(f"{BASE_URL}/v1/prospects/search", headers=headers, json=data)
-prospects = response.json()["data"]["prospects"]
-print(f"Found {len(prospects)} prospects")
+response = requests.post(f"{BASE_URL}/v1/prospects/search", 
+    headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
+    json={
+        "titles": ["CEO", "General Counsel"],
+        "industry": ["Legal Services"],
+        "location": ["United States"]
+    }
+)
+data = response.json()["data"]
+print(f"Found {data['pagination']['total']} prospects")
 ```
 
 ```javascript JavaScript
@@ -143,105 +143,29 @@ const response = await fetch(
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      query: {
-        person_titles: ['CEO', 'Chief Executive Officer'],
-        organization_industries: ['Legal'],
-        person_locations: ['United States'],
-        organization_num_employees_ranges: ['11-50', '51-200']
-      },
-      per_page: 50
+      titles: ['CEO', 'General Counsel'],
+      industry: ['Legal Services'],
+      location: ['United States']
     })
   }
 );
-
 const { data } = await response.json();
-console.log(`Found ${data.prospects.length} prospects`);
+console.log(`Found ${data.pagination.total} prospects`);
 ```
 
 </CodeGroup>
 
-### Example Response
-
-```json
-{
-  "data": {
-    "prospects": [
-      {
-        "id": "apollo_123456",
-        "name": "John Smith",
-        "title": "CEO",
-        "email": "john@example.com",
-        "company": "Acme Legal Corp",
-        "location": "New York, NY",
-        "linkedin_url": "https://linkedin.com/in/johnsmith"
-      },
-      {
-        "id": "apollo_789012",
-        "name": "Jane Doe",
-        "title": "Chief Executive Officer",
-        "email": "jane@lawfirm.com",
-        "company": "Legal Partners LLC",
-        "location": "San Francisco, CA",
-        "linkedin_url": "https://linkedin.com/in/janedoe"
-      }
-    ]
-  },
-  "meta": {
-    "page": 1,
-    "per_page": 50,
-    "total": 150
-  }
-}
-```
-
-## Query Examples
-
-### Search by Multiple Job Titles
-
-```json
-{
-  "query": {
-    "person_titles": ["CTO", "VP of Engineering", "Director of Technology"]
-  }
-}
-```
-
-### Search by Location and Industry
-
-```json
-{
-  "query": {
-    "person_locations": ["California", "Texas"],
-    "organization_industries": ["Technology", "SaaS"]
-  }
-}
-```
-
-### Search by Company Size
-
-```json
-{
-  "query": {
-    "organization_num_employees_ranges": ["51-200", "201-500"]
-  }
-}
-```
-
 ## Notes
 
-<Note>
-  Prospect search results come from a third-party data provider. Email addresses may not always be available.
-</Note>
-
 <Tip>
-  After finding prospects, use the [Save Prospects](/api-reference/prospects/save) endpoint to add them to your CRM.
+  We recommend migrating to [`/v1/prospector/search`](/api-reference/prospector/search) for full filter support including seniority, departments, company domains, funding stage, and revenue filters.
 </Tip>
 
 ## Errors
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Missing or invalid query parameters |
+| 400 | `validation_error` | No search filters provided |
 | 401 | `invalid_key` | Invalid API key |
-| 403 | `insufficient_permissions` | Missing `read` permission |
-| 429 | `rate_limited` | Rate limit exceeded |
+| 403 | `insufficient_permissions` | Missing `prospects:read` permission |
+| 503 | `service_unavailable` | Prospector service not configured |
