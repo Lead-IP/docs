@@ -1,0 +1,91 @@
+---
+title: "List Pipelines"
+api: "GET /v1/pipelines"
+description: "Retrieve all deal pipelines with their stages"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="pipelines" type="array">
+      <Expandable title="Pipeline object">
+        <ResponseField name="id" type="string">Pipeline ID</ResponseField>
+        <ResponseField name="name" type="string">Pipeline name</ResponseField>
+        <ResponseField name="color" type="string">Pipeline color</ResponseField>
+        <ResponseField name="stages" type="array">
+          <Expandable title="Stage object">
+            <ResponseField name="id" type="string">Stage ID</ResponseField>
+            <ResponseField name="name" type="string">Stage name</ResponseField>
+            <ResponseField name="stage_type" type="string">Stage type</ResponseField>
+            <ResponseField name="sort_order" type="integer">Sort order</ResponseField>
+            <ResponseField name="probability" type="number">Win probability</ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/pipelines \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/pipelines", headers=headers)
+pipelines = response.json()["data"]["pipelines"]
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/pipelines',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "pipelines": [
+      {
+        "id": "pipe-001",
+        "name": "Sales Pipeline",
+        "color": "#4CAF50",
+        "stages": [
+          { "id": "stage-001", "name": "Lead", "stage_type": "open", "sort_order": 1, "probability": 10 },
+          { "id": "stage-002", "name": "Proposal", "stage_type": "open", "sort_order": 2, "probability": 40 },
+          { "id": "stage-003", "name": "Won", "stage_type": "won", "sort_order": 3, "probability": 100 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 403 | `insufficient_permissions` | Missing `deals:read` permission |

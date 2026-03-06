@@ -1,0 +1,185 @@
+---
+title: "Create Deal"
+api: "POST /v1/deals"
+description: "Create a new deal in your workspace"
+---
+
+## Request
+
+### Body Parameters
+
+<ParamField body="name" type="string" required>
+  Deal name
+</ParamField>
+
+<ParamField body="stage" type="string">
+  Deal stage name
+</ParamField>
+
+<ParamField body="status" type="string" default="active">
+  Deal status (`active`, `won`, `lost`)
+</ParamField>
+
+<ParamField body="pipeline" type="string">
+  Pipeline name
+</ParamField>
+
+<ParamField body="estimated_value" type="number">
+  Estimated deal value
+</ParamField>
+
+<ParamField body="contact_id" type="string">
+  Primary contact ID (alias for `main_contact_id`)
+</ParamField>
+
+<ParamField body="owner_id" type="string">
+  Deal owner user ID (alias for `owner_user_id`)
+</ParamField>
+
+<ParamField body="priority" type="string">
+  Priority level
+</ParamField>
+
+<ParamField body="deal_type" type="string">
+  Deal/matter type (alias for `matter_type`)
+</ParamField>
+
+<ParamField body="notes" type="string">
+  Deal notes
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Array of tag strings
+</ParamField>
+
+<ParamField body="description" type="string">
+  High-level description
+</ParamField>
+
+<ParamField body="follow_up_date" type="string">
+  Next follow-up date (ISO 8601)
+</ParamField>
+
+<ParamField body="probability" type="number">
+  Win probability (0-100)
+</ParamField>
+
+<ParamField body="currency" type="string">
+  Currency code (e.g., `USD`, `EUR`)
+</ParamField>
+
+<ParamField body="related_company_id" type="string">
+  Related company ID
+</ParamField>
+
+<ParamField body="relationship_partner_id" type="string">
+  Relationship partner user ID
+</ParamField>
+
+<ParamField body="matter_lead_id" type="string">
+  Matter lead user ID
+</ParamField>
+
+<ParamField body="team_member_ids" type="array">
+  Array of team member user IDs
+</ParamField>
+
+<ParamField body="fee_model" type="string">
+  Fee/service model
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  The created deal object with all fields
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/deals \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme Corp Partnership",
+    "stage": "Proposal",
+    "pipeline": "Sales",
+    "estimated_value": 50000,
+    "contact_id": "contact-001",
+    "priority": "high"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/deals", headers=headers, json={
+    "name": "Acme Corp Partnership",
+    "stage": "Proposal",
+    "pipeline": "Sales",
+    "estimated_value": 50000
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/deals',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: 'Acme Corp Partnership',
+      stage: 'Proposal',
+      pipeline: 'Sales',
+      estimated_value: 50000
+    })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "deal-001",
+    "name": "Acme Corp Partnership",
+    "stage": "Proposal",
+    "status": "active",
+    "pipeline": "Sales",
+    "estimated_value": 50000,
+    "main_contact_id": "contact-001",
+    "owner_user_id": null,
+    "priority": "high",
+    "tags": [],
+    "created_date": "2026-03-06T10:00:00Z",
+    "updated_date": null
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `name` |
+| 403 | `insufficient_permissions` | Missing `deals:write` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

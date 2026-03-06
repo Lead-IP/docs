@@ -1,0 +1,106 @@
+---
+title: "List Companies"
+api: "GET /v1/companies"
+description: "Retrieve a paginated list of companies in your workspace"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">Page number</ParamField>
+<ParamField query="per_page" type="integer" default="50">Items per page (max: 100)</ParamField>
+<ParamField query="search" type="string">Search by company name (partial match)</ParamField>
+<ParamField query="industry" type="string">Filter by industry (partial match)</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="companies" type="array">
+      Array of company objects
+      <Expandable title="Company object">
+        <ResponseField name="id" type="string">Company ID (UUID)</ResponseField>
+        <ResponseField name="name" type="string">Company name</ResponseField>
+        <ResponseField name="industry" type="string">Industry</ResponseField>
+        <ResponseField name="website" type="string">Website URL</ResponseField>
+        <ResponseField name="linkedin_url" type="string">LinkedIn URL</ResponseField>
+        <ResponseField name="size" type="string">Company size</ResponseField>
+        <ResponseField name="domain" type="string">Domain</ResponseField>
+        <ResponseField name="city" type="string">City</ResponseField>
+        <ResponseField name="country" type="string">Country</ResponseField>
+        <ResponseField name="tags" type="array">Tags</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="updated_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata with `page`, `per_page`, `total`
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/companies \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/companies", headers=headers)
+companies = response.json()["data"]["companies"]
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/companies',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "companies": [
+      {
+        "id": "co-001",
+        "name": "Acme Legal",
+        "industry": "Legal Services",
+        "website": "https://acmelegal.com",
+        "size": "51-200",
+        "city": "New York",
+        "country": "US",
+        "tags": ["enterprise"],
+        "created_date": "2026-02-01T10:00:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 15 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 403 | `insufficient_permissions` | Missing `companies:read` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

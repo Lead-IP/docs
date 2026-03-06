@@ -1,0 +1,115 @@
+---
+title: "List Contact Notes"
+api: "GET /v1/contacts/:id/notes"
+description: "Retrieve a paginated list of notes for a specific contact"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Contact ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Items per page (max: 100)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="notes" type="array">
+      Array of note objects
+      <Expandable title="Note object">
+        <ResponseField name="id" type="string">Note ID</ResponseField>
+        <ResponseField name="title" type="string">Note title</ResponseField>
+        <ResponseField name="content" type="string">Note content</ResponseField>
+        <ResponseField name="note_type" type="string">Note type</ResponseField>
+        <ResponseField name="tags" type="array">Tags</ResponseField>
+        <ResponseField name="is_pinned" type="boolean">Whether the note is pinned</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="updated_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+  <Expandable title="properties">
+    <ResponseField name="page" type="integer">Current page</ResponseField>
+    <ResponseField name="per_page" type="integer">Items per page</ResponseField>
+    <ResponseField name="total" type="integer">Total count</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/notes \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/contacts/123e4567-e89b-12d3-a456-426614174000/notes", headers=headers)
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/notes',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data, meta } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "notes": [
+      {
+        "id": "note-001",
+        "title": "Meeting notes",
+        "content": "Discussed partnership",
+        "note_type": "general",
+        "tags": [],
+        "is_pinned": false,
+        "created_date": "2026-03-06T10:00:00Z",
+        "updated_date": null
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 3 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 404 | `not_found` | Contact not found |
+| 403 | `insufficient_permissions` | Missing `contacts:read` permission |

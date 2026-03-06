@@ -1,0 +1,95 @@
+---
+title: "Add Tags to Contact"
+api: "POST /v1/contacts/:id/tags"
+description: "Add tags to a contact (merges with existing tags, no duplicates)"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Contact ID (UUID)
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="tags" type="array" required>
+  Array of tag strings to add
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="contact_id" type="string">Contact ID</ResponseField>
+    <ResponseField name="tags" type="array">Updated full list of tags</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/tags \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "tags": ["vip", "legal"] }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(
+    f"{BASE_URL}/v1/contacts/123e4567-e89b-12d3-a456-426614174000/tags",
+    headers=headers,
+    json={"tags": ["vip", "legal"]}
+)
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/tags',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ tags: ['vip', 'legal'] })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+    "tags": ["existing-tag", "vip", "legal"]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing or invalid `tags` array |
+| 404 | `not_found` | Contact not found |
+| 403 | `insufficient_permissions` | Missing `contacts:write` permission |

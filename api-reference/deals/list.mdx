@@ -1,0 +1,165 @@
+---
+title: "List Deals"
+api: "GET /v1/deals"
+description: "Retrieve a paginated list of deals in your workspace"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Number of deals per page (max: 100)
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by status (e.g., `active`, `won`, `lost`)
+</ParamField>
+
+<ParamField query="pipeline" type="string">
+  Filter by pipeline name
+</ParamField>
+
+<ParamField query="stage" type="string">
+  Filter by stage name
+</ParamField>
+
+<ParamField query="contact_id" type="string">
+  Filter by main contact ID
+</ParamField>
+
+<ParamField query="owner_user_id" type="string">
+  Filter by deal owner user ID
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Filter by tag
+</ParamField>
+
+<ParamField query="created_after" type="string">
+  Filter deals created after this date (ISO 8601)
+</ParamField>
+
+<ParamField query="created_before" type="string">
+  Filter deals created before this date (ISO 8601)
+</ParamField>
+
+<ParamField query="updated_after" type="string">
+  Filter deals updated after this date (ISO 8601)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="deals" type="array">
+      Array of deal objects
+      <Expandable title="Deal object">
+        <ResponseField name="id" type="string">Unique deal ID (UUID)</ResponseField>
+        <ResponseField name="name" type="string">Deal name</ResponseField>
+        <ResponseField name="stage" type="string">Current stage</ResponseField>
+        <ResponseField name="status" type="string">Deal status</ResponseField>
+        <ResponseField name="pipeline" type="string">Pipeline name</ResponseField>
+        <ResponseField name="estimated_value" type="number">Estimated deal value</ResponseField>
+        <ResponseField name="main_contact_id" type="string">Primary contact ID</ResponseField>
+        <ResponseField name="owner_user_id" type="string">Deal owner user ID</ResponseField>
+        <ResponseField name="priority" type="string">Priority level</ResponseField>
+        <ResponseField name="matter_type" type="string">Deal/matter type</ResponseField>
+        <ResponseField name="tags" type="array">Tags</ResponseField>
+        <ResponseField name="related_company_id" type="string">Related company ID</ResponseField>
+        <ResponseField name="high_level_description" type="string">Description</ResponseField>
+        <ResponseField name="next_follow_up_date" type="string">Next follow-up date</ResponseField>
+        <ResponseField name="fee_model" type="string">Fee/service model</ResponseField>
+        <ResponseField name="probability" type="number">Win probability (0-100)</ResponseField>
+        <ResponseField name="currency" type="string">Currency code</ResponseField>
+        <ResponseField name="closed_date" type="string">Date deal was closed</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="updated_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+  <Expandable title="properties">
+    <ResponseField name="page" type="integer">Current page</ResponseField>
+    <ResponseField name="per_page" type="integer">Items per page</ResponseField>
+    <ResponseField name="total" type="integer">Total count</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/deals \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/deals", headers=headers)
+deals = response.json()["data"]["deals"]
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/deals',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "deals": [
+      {
+        "id": "deal-001",
+        "name": "Acme Corp Partnership",
+        "stage": "Proposal",
+        "status": "active",
+        "pipeline": "Sales",
+        "estimated_value": 50000,
+        "main_contact_id": "contact-001",
+        "owner_user_id": "user-001",
+        "priority": "high",
+        "matter_type": "partnership",
+        "tags": ["enterprise"],
+        "probability": 60,
+        "currency": "USD",
+        "created_date": "2026-03-01T10:00:00Z",
+        "updated_date": "2026-03-05T14:00:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 23 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `deals:read` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,75 @@
+---
+title: "Create Company Note"
+api: "POST /v1/companies/:id/notes"
+description: "Create a note attached to a specific company"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>Company ID (UUID)</ParamField>
+
+### Body Parameters
+
+<ParamField body="title" type="string" required>Note title</ParamField>
+<ParamField body="content" type="string">Note content (max 50,000 characters)</ParamField>
+<ParamField body="note_type" type="string" default="general">Note type</ParamField>
+<ParamField body="tags" type="array">Array of tag strings</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  Note object with `id`, `title`, `content`, `note_type`, `tags`, `created_date`
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/companies/co-001/notes \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "Industry research", "content": "Key findings about the legal tech market" }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/companies/co-001/notes", headers=headers, json={
+    "title": "Industry research", "content": "Key findings"
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/companies/co-001/notes',
+  {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Industry research', content: 'Key findings' })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `title` |
+| 404 | `not_found` | Company not found |
+| 403 | `insufficient_permissions` | Missing `companies:write` permission |

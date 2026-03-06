@@ -1,0 +1,78 @@
+---
+title: "Create Task"
+api: "POST /v1/tasks"
+description: "Create a new task"
+---
+
+## Request
+
+### Body Parameters
+
+<ParamField body="title" type="string" required>Task title</ParamField>
+<ParamField body="description" type="string">Task description</ParamField>
+<ParamField body="status" type="string" default="open">Status (`open`, `in_progress`, `completed`)</ParamField>
+<ParamField body="priority" type="string">Priority level</ParamField>
+<ParamField body="task_type" type="string">Task type</ParamField>
+<ParamField body="due_date" type="string">Due date (ISO 8601)</ParamField>
+<ParamField body="assignee_id" type="string">Assignee user ID</ParamField>
+<ParamField body="contact_id" type="string">Related contact ID</ParamField>
+<ParamField body="deal_id" type="string">Related deal ID</ParamField>
+<ParamField body="event_id" type="string">Related event ID</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  Created task with `id`, `title`, `status`, `priority`, `due_date`, `assigned_to_user_id`, `created_date`
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/tasks \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "title": "Follow up with client", "due_date": "2026-03-10", "assignee_id": "user-001" }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/tasks", headers=headers, json={
+    "title": "Follow up with client",
+    "due_date": "2026-03-10",
+    "assignee_id": "user-001"
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/tasks',
+  {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: 'Follow up with client', due_date: '2026-03-10' })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `title` |
+| 403 | `insufficient_permissions` | Missing `activities:write` permission |

@@ -1,0 +1,73 @@
+---
+title: "List Deal Notes"
+api: "GET /v1/deals/:id/notes"
+description: "Retrieve a paginated list of notes for a specific deal"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Deal ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">Page number</ParamField>
+<ParamField query="per_page" type="integer" default="50">Items per page (max: 100)</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="notes" type="array">
+      Array of note objects with `id`, `title`, `content`, `note_type`, `tags`, `is_pinned`, `created_date`, `updated_date`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata with `page`, `per_page`, `total`
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/deals/deal-001/notes \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/deals/deal-001/notes", headers=headers)
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/deals/deal-001/notes',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data, meta } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 404 | `not_found` | Deal not found |
+| 403 | `insufficient_permissions` | Missing `deals:read` permission |

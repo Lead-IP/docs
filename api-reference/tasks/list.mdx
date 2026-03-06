@@ -1,0 +1,82 @@
+---
+title: "List Tasks"
+api: "GET /v1/tasks"
+description: "Retrieve a paginated list of tasks in your workspace"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">Page number</ParamField>
+<ParamField query="per_page" type="integer" default="50">Items per page (max: 100)</ParamField>
+<ParamField query="status" type="string">Filter by status (e.g., `open`, `completed`)</ParamField>
+<ParamField query="assignee_id" type="string">Filter by assigned user ID</ParamField>
+<ParamField query="deal_id" type="string">Filter by deal ID</ParamField>
+<ParamField query="contact_id" type="string">Filter by contact ID</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="tasks" type="array">
+      <Expandable title="Task object">
+        <ResponseField name="id" type="string">Task ID</ResponseField>
+        <ResponseField name="title" type="string">Task title</ResponseField>
+        <ResponseField name="description" type="string">Task description</ResponseField>
+        <ResponseField name="status" type="string">Task status</ResponseField>
+        <ResponseField name="priority" type="string">Priority level</ResponseField>
+        <ResponseField name="task_type" type="string">Task type</ResponseField>
+        <ResponseField name="due_date" type="string">Due date (ISO 8601)</ResponseField>
+        <ResponseField name="assigned_to_user_id" type="string">Assignee user ID</ResponseField>
+        <ResponseField name="contact_id" type="string">Related contact ID</ResponseField>
+        <ResponseField name="deal_id" type="string">Related deal ID</ResponseField>
+        <ResponseField name="event_id" type="string">Related event ID</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="updated_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">Pagination metadata</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/tasks?status=open \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/tasks", headers=headers, params={"status": "open"})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/tasks?status=open',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 403 | `insufficient_permissions` | Missing `activities:read` permission |

@@ -1,0 +1,137 @@
+---
+title: "Search Prospects"
+api: "POST /v1/prospector/search"
+description: "Search for prospects using advanced filters (people and company criteria)"
+---
+
+## Request
+
+### Body Parameters
+
+#### People Filters
+
+<ParamField body="titles" type="array">Job titles to search for</ParamField>
+<ParamField body="seniority" type="array">Seniority levels (e.g., `c_suite`, `vp`, `director`, `manager`)</ParamField>
+<ParamField body="departments" type="array">Departments (e.g., `engineering`, `sales`, `marketing`)</ParamField>
+<ParamField body="name" type="string">Search by person name</ParamField>
+
+#### Company Filters
+
+<ParamField body="company_name" type="string">Single company name</ParamField>
+<ParamField body="companies" type="array">Multiple company names</ParamField>
+<ParamField body="domains" type="array">Company domains to search</ParamField>
+<ParamField body="industry" type="array">Industry filters</ParamField>
+<ParamField body="keywords" type="array">Company keywords/categories</ParamField>
+<ParamField body="headcount" type="array">Company size ranges (e.g., `1-10`, `51-200`, `1001-5000`)</ParamField>
+
+#### Location Filters
+
+<ParamField body="location" type="array">Person locations</ParamField>
+<ParamField body="hq_location" type="array">Company HQ locations</ParamField>
+
+#### Funding & Revenue Filters
+
+<ParamField body="funding_stage" type="array">Funding stage names</ParamField>
+<ParamField body="min_funding" type="number">Minimum last funding amount</ParamField>
+<ParamField body="max_funding" type="number">Maximum last funding amount</ParamField>
+<ParamField body="min_revenue" type="number">Minimum annual revenue</ParamField>
+<ParamField body="max_revenue" type="number">Maximum annual revenue</ParamField>
+
+#### Pagination
+
+<ParamField body="page" type="integer" default="1">Page number</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="results" type="array">
+      <Expandable title="Prospect object">
+        <ResponseField name="full_name" type="string">Full name</ResponseField>
+        <ResponseField name="first_name" type="string">First name</ResponseField>
+        <ResponseField name="last_name" type="string">Last name</ResponseField>
+        <ResponseField name="job_title" type="string">Job title</ResponseField>
+        <ResponseField name="linkedin_url" type="string">LinkedIn URL</ResponseField>
+        <ResponseField name="location" type="string">Location</ResponseField>
+        <ResponseField name="email_available" type="boolean">Whether email can be revealed</ResponseField>
+        <ResponseField name="phone_available" type="boolean">Whether phone can be revealed</ResponseField>
+        <ResponseField name="company" type="string">Company name</ResponseField>
+        <ResponseField name="company_domain" type="string">Company domain</ResponseField>
+        <ResponseField name="company_size" type="string">Company size range</ResponseField>
+        <ResponseField name="company_industry" type="string">Company industry</ResponseField>
+        <ResponseField name="member_id" type="string">Member ID (use for reveal)</ResponseField>
+        <ResponseField name="company_id" type="string">Company ID (use for reveal)</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="pagination" type="object">
+      <Expandable title="properties">
+        <ResponseField name="page" type="integer">Current page</ResponseField>
+        <ResponseField name="per_page" type="integer">Results per page</ResponseField>
+        <ResponseField name="total" type="integer">Total results</ResponseField>
+        <ResponseField name="total_pages" type="integer">Total pages</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/search \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "titles": ["General Counsel", "Head of Legal"],
+    "industry": ["Legal Services"],
+    "headcount": ["51-200", "201-500"],
+    "location": ["United States"]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/prospector/search", headers=headers, json={
+    "titles": ["General Counsel"],
+    "industry": ["Legal Services"],
+    "location": ["United States"]
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/search',
+  {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      titles: ['General Counsel'],
+      industry: ['Legal Services'],
+      location: ['United States']
+    })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | No search filters provided |
+| 403 | `insufficient_permissions` | Missing `prospects:read` permission |
+| 503 | `service_unavailable` | Prospector service not configured |

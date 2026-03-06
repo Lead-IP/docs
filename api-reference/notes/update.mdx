@@ -1,0 +1,73 @@
+---
+title: "Update Note"
+api: "PATCH /v1/notes/:id"
+description: "Update an existing note"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>Note ID (UUID)</ParamField>
+
+### Body Parameters
+
+<ParamField body="title" type="string">Note title</ParamField>
+<ParamField body="content" type="string">Content (max 50,000 characters)</ParamField>
+<ParamField body="note_type" type="string">Note type</ParamField>
+<ParamField body="tags" type="array">Tags (replaces existing)</ParamField>
+<ParamField body="is_pinned" type="boolean">Pin/unpin</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  Updated note with `id`, `title`, `note_type`, `tags`, `is_pinned`, `updated_date`
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://data.leadlex.com/functions/v1/api-gateway/v1/notes/note-001 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "is_pinned": true }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.patch(f"{BASE_URL}/v1/notes/note-001", headers=headers, json={"is_pinned": True})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/notes/note-001',
+  {
+    method: 'PATCH',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_pinned: true })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 404 | `not_found` | Note not found |
+| 403 | `insufficient_permissions` | Missing `contacts:write` permission |

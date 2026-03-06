@@ -1,0 +1,119 @@
+---
+title: "List Contact Activities"
+api: "GET /v1/contacts/:id/activities"
+description: "Retrieve a paginated list of activities for a specific contact"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Contact ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Number of activities per page (max: 100)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="activities" type="array">
+      Array of activity objects
+      <Expandable title="Activity object">
+        <ResponseField name="id" type="string">Unique activity ID</ResponseField>
+        <ResponseField name="activity_type" type="string">Type of activity (e.g., `email_sent`, `call`, `meeting`)</ResponseField>
+        <ResponseField name="description" type="string">Activity description</ResponseField>
+        <ResponseField name="entity_type" type="string">Entity type (`contact`, `deal`)</ResponseField>
+        <ResponseField name="entity_id" type="string">Related entity ID</ResponseField>
+        <ResponseField name="entity_name" type="string">Related entity name</ResponseField>
+        <ResponseField name="metadata" type="object">Additional metadata</ResponseField>
+        <ResponseField name="user_id" type="string">User who performed the activity</ResponseField>
+        <ResponseField name="user_name" type="string">Name of user</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+  <Expandable title="properties">
+    <ResponseField name="page" type="integer">Current page</ResponseField>
+    <ResponseField name="per_page" type="integer">Items per page</ResponseField>
+    <ResponseField name="total" type="integer">Total count</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/activities \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/contacts/123e4567-e89b-12d3-a456-426614174000/activities", headers=headers)
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/activities',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "activities": [
+      {
+        "id": "act-001",
+        "activity_type": "email_sent",
+        "description": "Sent introductory email",
+        "entity_type": "contact",
+        "entity_id": "123e4567-e89b-12d3-a456-426614174000",
+        "entity_name": "Jane Doe",
+        "metadata": null,
+        "user_id": "user-001",
+        "user_name": "Alex Smith",
+        "created_date": "2026-03-01T10:00:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 12 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 404 | `not_found` | Contact not found |
+| 403 | `insufficient_permissions` | Missing `activities:read` permission |

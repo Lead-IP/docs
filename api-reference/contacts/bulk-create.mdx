@@ -1,0 +1,134 @@
+---
+title: "Bulk Create Contacts"
+api: "POST /v1/contacts/bulk"
+description: "Create multiple contacts in a single request (max 500)"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+### Body Parameters
+
+<ParamField body="contacts" type="array" required>
+  Array of contact objects (max 500)
+  <Expandable title="Contact object">
+    <ParamField body="full_name" type="string" required>
+      Contact's full name
+    </ParamField>
+    <ParamField body="email" type="string">
+      Email address
+    </ParamField>
+    <ParamField body="phone" type="string">
+      Phone number
+    </ParamField>
+    <ParamField body="job_title" type="string">
+      Job title
+    </ParamField>
+    <ParamField body="company" type="string">
+      Company name
+    </ParamField>
+    <ParamField body="linkedin_url" type="string">
+      LinkedIn profile URL
+    </ParamField>
+    <ParamField body="tags" type="array">
+      Array of tag strings
+    </ParamField>
+    <ParamField body="custom_fields" type="object">
+      Custom field key-value pairs
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="created" type="integer">
+      Number of contacts created
+    </ResponseField>
+    <ResponseField name="contacts" type="array">
+      Array of created contacts with `id`, `full_name`, `email`
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/bulk \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contacts": [
+      { "full_name": "Jane Doe", "email": "jane@example.com", "job_title": "CEO" },
+      { "full_name": "John Smith", "email": "john@example.com", "company": "Acme Inc" }
+    ]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/contacts/bulk", headers=headers, json={
+    "contacts": [
+        {"full_name": "Jane Doe", "email": "jane@example.com"},
+        {"full_name": "John Smith", "email": "john@example.com"}
+    ]
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/bulk',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contacts: [
+        { full_name: 'Jane Doe', email: 'jane@example.com' },
+        { full_name: 'John Smith', email: 'john@example.com' }
+      ]
+    })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "created": 2,
+    "contacts": [
+      { "id": "abc-123", "full_name": "Jane Doe", "email": "jane@example.com" },
+      { "id": "def-456", "full_name": "John Smith", "email": "john@example.com" }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing or invalid `contacts` array |
+| 400 | `validation_error` | More than 500 contacts |
+| 403 | `insufficient_permissions` | Missing `contacts:write` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

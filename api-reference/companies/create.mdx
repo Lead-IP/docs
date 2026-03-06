@@ -1,0 +1,81 @@
+---
+title: "Create Company"
+api: "POST /v1/companies"
+description: "Create a new company in your workspace"
+---
+
+## Request
+
+### Body Parameters
+
+<ParamField body="name" type="string" required>Company name</ParamField>
+<ParamField body="industry" type="string">Industry</ParamField>
+<ParamField body="website" type="string">Website URL</ParamField>
+<ParamField body="linkedin_url" type="string">LinkedIn URL</ParamField>
+<ParamField body="size" type="string">Company size (e.g., `1-10`, `51-200`)</ParamField>
+<ParamField body="city" type="string">City</ParamField>
+<ParamField body="country" type="string">Country</ParamField>
+<ParamField body="domain" type="string">Domain name</ParamField>
+<ParamField body="tags" type="array">Array of tag strings</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Company ID</ResponseField>
+    <ResponseField name="name" type="string">Company name</ResponseField>
+    <ResponseField name="industry" type="string">Industry</ResponseField>
+    <ResponseField name="website" type="string">Website</ResponseField>
+    <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/companies \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Acme Legal", "industry": "Legal Services", "website": "https://acmelegal.com" }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/companies", headers=headers, json={
+    "name": "Acme Legal", "industry": "Legal Services"
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/companies',
+  {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: 'Acme Legal', industry: 'Legal Services' })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `name` |
+| 403 | `insufficient_permissions` | Missing `companies:write` permission |

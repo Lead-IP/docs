@@ -1,0 +1,88 @@
+---
+title: "Link Contacts to Company"
+api: "POST /v1/companies/:id/contacts/link"
+description: "Link existing contacts to a company (max 100 per request)"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>Company ID (UUID)</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_ids" type="array" required>
+  Array of contact IDs to link (max 100)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="updated" type="integer">Number of contacts linked</ResponseField>
+    <ResponseField name="failed" type="integer">Number of contacts that couldn't be linked</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/companies/co-001/contacts/link \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{ "contact_ids": ["contact-001", "contact-002"] }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/companies/co-001/contacts/link", headers=headers, json={
+    "contact_ids": ["contact-001", "contact-002"]
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/companies/co-001/contacts/link',
+  {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contact_ids: ['contact-001', 'contact-002'] })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "updated": 2,
+    "failed": 0
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing or empty `contact_ids` array |
+| 400 | `validation_error` | More than 100 contact IDs |
+| 403 | `insufficient_permissions` | Missing `contacts:write` permission |

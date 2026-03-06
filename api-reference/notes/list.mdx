@@ -1,0 +1,79 @@
+---
+title: "List Notes"
+api: "GET /v1/notes"
+description: "Retrieve a paginated list of workspace notes"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">Page number</ParamField>
+<ParamField query="per_page" type="integer" default="50">Items per page (max: 100)</ParamField>
+<ParamField query="note_type" type="string">Filter by note type</ParamField>
+<ParamField query="tags" type="string">Filter by tag</ParamField>
+<ParamField query="search" type="string">Search by title or content</ParamField>
+<ParamField query="is_pinned" type="string">Filter pinned notes (`true`)</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="notes" type="array">
+      <Expandable title="Note object">
+        <ResponseField name="id" type="string">Note ID</ResponseField>
+        <ResponseField name="title" type="string">Title</ResponseField>
+        <ResponseField name="content" type="string">Content</ResponseField>
+        <ResponseField name="note_type" type="string">Note type</ResponseField>
+        <ResponseField name="tags" type="array">Tags</ResponseField>
+        <ResponseField name="is_pinned" type="boolean">Pinned status</ResponseField>
+        <ResponseField name="contact_id" type="string">Related contact ID</ResponseField>
+        <ResponseField name="deal_id" type="string">Related deal ID</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="updated_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">Pagination metadata</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/notes \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/notes", headers=headers)
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/notes',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 403 | `insufficient_permissions` | Missing `contacts:read` permission |

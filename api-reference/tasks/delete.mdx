@@ -1,0 +1,60 @@
+---
+title: "Delete Task"
+api: "DELETE /v1/tasks/:id"
+description: "Delete a task"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>Task ID (UUID)</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="deleted" type="boolean">Always `true`</ResponseField>
+    <ResponseField name="id" type="string">Deleted task ID</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://data.leadlex.com/functions/v1/api-gateway/v1/tasks/task-001 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.delete(f"{BASE_URL}/v1/tasks/task-001", headers=headers)
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/tasks/task-001',
+  { method: 'DELETE', headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 403 | `insufficient_permissions` | Missing `activities:write` permission |

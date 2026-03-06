@@ -1,0 +1,86 @@
+---
+title: "Bulk Create Deals"
+api: "POST /v1/deals/bulk"
+description: "Create multiple deals in a single request (max 50)"
+---
+
+## Request
+
+### Body Parameters
+
+<ParamField body="deals" type="array" required>
+  Array of deal objects (max 50). Each deal requires a `name` field. All other fields from the [Create Deal](/api-reference/deals/create) endpoint are supported.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="array">
+  Array of created deal objects with all fields
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/deals/bulk \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deals": [
+      { "name": "Deal A", "stage": "Lead", "pipeline": "Sales" },
+      { "name": "Deal B", "stage": "Proposal", "estimated_value": 10000 }
+    ]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/deals/bulk", headers=headers, json={
+    "deals": [
+        {"name": "Deal A", "stage": "Lead"},
+        {"name": "Deal B", "stage": "Proposal"}
+    ]
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/deals/bulk',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      deals: [
+        { name: 'Deal A', stage: 'Lead' },
+        { name: 'Deal B', stage: 'Proposal' }
+      ]
+    })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `deals` array, empty array, or missing `name` on any deal |
+| 400 | `validation_error` | More than 50 deals |
+| 403 | `insufficient_permissions` | Missing `deals:write` permission |

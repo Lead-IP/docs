@@ -1,0 +1,99 @@
+---
+title: "Outreach Analytics"
+api: "GET /v1/analytics/outreach"
+description: "Get outreach performance metrics including activity counts, deal status, and conversion rates"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="days" type="integer" default="7">Number of days to look back for activities</ParamField>
+<ParamField query="pipeline" type="string">Filter deals by pipeline</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="period_days" type="integer">Number of days in period</ResponseField>
+    <ResponseField name="activities" type="object">
+      Activity counts by type, plus `total`
+    </ResponseField>
+    <ResponseField name="deals" type="object">
+      Deal counts by status, plus `total`
+    </ResponseField>
+    <ResponseField name="conversion" type="object">
+      <Expandable title="properties">
+        <ResponseField name="reply_rate" type="number">Email reply rate (%)</ResponseField>
+        <ResponseField name="meeting_rate" type="number">Meeting conversion rate (%)</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/analytics/outreach?days=30" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/analytics/outreach", headers=headers, params={"days": 30})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/analytics/outreach?days=30',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "period_days": 30,
+    "activities": {
+      "email_sent": 150,
+      "email_replied": 35,
+      "call": 42,
+      "meeting": 12,
+      "total": 239
+    },
+    "deals": {
+      "active": 18,
+      "won": 5,
+      "lost": 3,
+      "total": 26
+    },
+    "conversion": {
+      "reply_rate": 23.3,
+      "meeting_rate": 8.0
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 403 | `insufficient_permissions` | Missing `activities:read` permission |

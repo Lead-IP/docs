@@ -39,7 +39,64 @@
               "api-reference/contacts/list",
               "api-reference/contacts/create",
               "api-reference/contacts/get",
-              "api-reference/contacts/update"
+              "api-reference/contacts/update",
+              "api-reference/contacts/delete",
+              "api-reference/contacts/bulk-create",
+              "api-reference/contacts/activities",
+              "api-reference/contacts/add-tags",
+              "api-reference/contacts/create-note",
+              "api-reference/contacts/list-notes"
+            ]
+          },
+          {
+            "group": "Companies",
+            "pages": [
+              "api-reference/companies/list",
+              "api-reference/companies/create",
+              "api-reference/companies/get",
+              "api-reference/companies/update",
+              "api-reference/companies/contacts",
+              "api-reference/companies/deals",
+              "api-reference/companies/link-contacts",
+              "api-reference/companies/create-note",
+              "api-reference/companies/list-notes"
+            ]
+          },
+          {
+            "group": "Deals",
+            "pages": [
+              "api-reference/deals/list",
+              "api-reference/deals/create",
+              "api-reference/deals/update",
+              "api-reference/deals/bulk-create",
+              "api-reference/deals/bulk-update",
+              "api-reference/deals/create-note",
+              "api-reference/deals/list-notes"
+            ]
+          },
+          {
+            "group": "Pipelines",
+            "pages": [
+              "api-reference/pipelines/list"
+            ]
+          },
+          {
+            "group": "Tasks",
+            "pages": [
+              "api-reference/tasks/list",
+              "api-reference/tasks/create",
+              "api-reference/tasks/update",
+              "api-reference/tasks/delete"
+            ]
+          },
+          {
+            "group": "Notes",
+            "pages": [
+              "api-reference/notes/list",
+              "api-reference/notes/create",
+              "api-reference/notes/get",
+              "api-reference/notes/update",
+              "api-reference/notes/delete"
             ]
           },
           {
@@ -48,6 +105,20 @@
               "api-reference/lists/list",
               "api-reference/lists/create",
               "api-reference/lists/add-contacts"
+            ]
+          },
+          {
+            "group": "Tags",
+            "pages": [
+              "api-reference/tags/list"
+            ]
+          },
+          {
+            "group": "Prospector",
+            "pages": [
+              "api-reference/prospector/search",
+              "api-reference/prospector/reveal",
+              "api-reference/prospector/reveal-bulk"
             ]
           },
           {
@@ -63,6 +134,20 @@
               "api-reference/campaigns/list",
               "api-reference/campaigns/create",
               "api-reference/campaigns/start"
+            ]
+          },
+          {
+            "group": "Users",
+            "pages": [
+              "api-reference/users/list"
+            ]
+          },
+          {
+            "group": "Stats & Analytics",
+            "pages": [
+              "api-reference/stats/pipeline",
+              "api-reference/stats/activities",
+              "api-reference/analytics/outreach"
             ]
           },
           {

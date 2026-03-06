@@ -1,0 +1,122 @@
+---
+title: "Bulk Reveal Prospects"
+api: "POST /v1/prospector/reveal/bulk"
+description: "Reveal emails and phones for multiple prospects (max 25)"
+---
+
+## Request
+
+### Body Parameters
+
+<ParamField body="prospects" type="array" required>
+  Array of prospect objects (max 25)
+  <Expandable title="Prospect object">
+    <ParamField body="member_id" type="string" required>Member ID from search</ParamField>
+    <ParamField body="company_id" type="string">Company ID from search</ParamField>
+  </Expandable>
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="results" type="array">
+      Array of reveal results, each with `member_id`, `email`, `phone`, `full_name`, `status` (`success` or `failed`)
+    </ResponseField>
+    <ResponseField name="summary" type="object">
+      <Expandable title="properties">
+        <ResponseField name="total" type="integer">Total requested</ResponseField>
+        <ResponseField name="succeeded" type="integer">Successful reveals</ResponseField>
+        <ResponseField name="failed" type="integer">Failed reveals</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/reveal/bulk \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prospects": [
+      { "member_id": "12345", "company_id": "67890" },
+      { "member_id": "11111", "company_id": "22222" }
+    ]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+response = requests.post(f"{BASE_URL}/v1/prospector/reveal/bulk", headers=headers, json={
+    "prospects": [
+        {"member_id": "12345", "company_id": "67890"},
+        {"member_id": "11111", "company_id": "22222"}
+    ]
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/reveal/bulk',
+  {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prospects: [
+        { member_id: '12345', company_id: '67890' },
+        { member_id: '11111', company_id: '22222' }
+      ]
+    })
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "results": [
+      {
+        "member_id": "12345",
+        "email": "jane@acme.com",
+        "email_verified": true,
+        "phone": "+1234567890",
+        "full_name": "Jane Doe",
+        "status": "success"
+      },
+      {
+        "member_id": "11111",
+        "status": "failed",
+        "error": "HTTP 404"
+      }
+    ],
+    "summary": { "total": 2, "succeeded": 1, "failed": 1 }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `prospects` array or exceeds 25 |
+| 403 | `insufficient_permissions` | Missing `prospects:read` permission |

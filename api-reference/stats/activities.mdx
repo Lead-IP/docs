@@ -1,0 +1,82 @@
+---
+title: "Activity Stats"
+api: "GET /v1/stats/activities"
+description: "Get activity counts grouped by type for a date range"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="date_from" type="string" required>Start date (ISO 8601)</ParamField>
+<ParamField query="date_to" type="string" required>End date (ISO 8601)</ParamField>
+<ParamField query="activity_type" type="string">Filter by activity type</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="total" type="integer">Total activities</ResponseField>
+    <ResponseField name="by_type" type="object">Object with activity types as keys and counts as values</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/stats/activities?date_from=2026-03-01&date_to=2026-03-06" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/stats/activities", headers=headers, params={
+    "date_from": "2026-03-01", "date_to": "2026-03-06"
+})
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/stats/activities?date_from=2026-03-01&date_to=2026-03-06',
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "total": 87,
+    "by_type": {
+      "email_sent": 45,
+      "email_replied": 12,
+      "call": 18,
+      "meeting": 7,
+      "note": 5
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `date_from` or `date_to` |
+| 403 | `insufficient_permissions` | Missing `activities:read` permission |
