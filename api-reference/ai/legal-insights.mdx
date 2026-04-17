@@ -1,0 +1,141 @@
+---
+title: "Legal Insights"
+api: "POST /v1/ai/legal-insights"
+description: "Generate legal-domain insights across a matter or deal - risk analysis, precedent pointers, and workflow recommendations"
+---
+
+<Warning>
+  This endpoint consumes 4 AI credits per call because it uses larger reasoning models tuned for legal text. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Deduplicates retries within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="matter_id" type="string">
+  UUID of a matter to analyze. Provide either `matter_id` or `deal_id`.
+</ParamField>
+
+<ParamField body="deal_id" type="string">
+  UUID of a deal to analyze.
+</ParamField>
+
+<ParamField body="focus" type="array">
+  Optional subset of insight types: `risks`, `precedents`, `next_steps`, `deadlines`, `counterparty`, `regulatory`. Defaults to all.
+</ParamField>
+
+<ParamField body="jurisdiction" type="string">
+  Optional ISO 3166-1 alpha-2 country code (or EU subdivision) used to scope precedent suggestions. Defaults to the workspace's default jurisdiction.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="summary" type="string">Narrative summary of the matter's current state</ResponseField>
+    <ResponseField name="risks" type="array">Each item has `description`, `severity`, and `likelihood`</ResponseField>
+    <ResponseField name="precedents" type="array">Each item has `title`, `citation`, `jurisdiction`, `relevance`</ResponseField>
+    <ResponseField name="next_steps" type="array">Ordered recommended actions</ResponseField>
+    <ResponseField name="deadlines" type="array">Detected or suggested deadlines with `description` and `due_date`</ResponseField>
+    <ResponseField name="counterparty" type="object">Observations about the counterparty and their legal posture</ResponseField>
+    <ResponseField name="regulatory" type="array">Applicable regulatory considerations with citations</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`. Precedent citations are intended as a research starting point and should be independently verified before being relied upon in client work.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/ai/legal-insights \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"matter_id": "matter_01HY1", "jurisdiction": "DE"}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/ai/legal-insights",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"matter_id": "matter_01HY1", "jurisdiction": "DE"},
+)
+print(r.json()["data"]["summary"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/ai/legal-insights',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ matter_id: 'matter_01HY1', jurisdiction: 'DE' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.summary);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "summary": "Cross-border M&A matter involving German and US counterparties; competition review likely triggered.",
+    "risks": [
+      { "description": "Notification threshold under GWB may be met", "severity": "high", "likelihood": "medium" }
+    ],
+    "precedents": [
+      { "title": "Case Hoechst/Rhône-Poulenc", "citation": "BKartA B5-213/98", "jurisdiction": "DE", "relevance": 0.81 }
+    ],
+    "next_steps": [
+      "Confirm worldwide turnover against German merger control thresholds",
+      "Engage competition counsel in Brussels"
+    ],
+    "deadlines": [
+      { "description": "Signing target", "due_date": "2026-06-30" }
+    ],
+    "counterparty": { "observations": "Represented by a US firm not admitted in Germany; local counsel likely needed." },
+    "regulatory": [
+      { "regime": "GWB", "citation": "Section 35 GWB", "notes": "Merger notification thresholds" }
+    ],
+    "credits_remaining": 4854
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing both `matter_id` and `deal_id`, or invalid jurisdiction |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Target entity does not exist |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,141 @@
+---
+title: "Import Companies"
+api: "POST /v1/import/companies"
+description: "Bulk-import companies from a JSON array or CSV payload"
+---
+
+## Request
+
+Supply either a `rows` array or a raw `csv` string. Imports up to 500 rows are synchronous; larger payloads are queued and tracked via `job_id`.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Strongly recommended. Returns the original result (including `job_id`) within 24 hours when replayed.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="rows" type="array">
+  Array of company objects with the same fields accepted by `POST /v1/companies`.
+</ParamField>
+
+<ParamField body="csv" type="string">
+  Raw CSV string. Provide either `rows` or `csv`.
+</ParamField>
+
+<ParamField body="has_header" type="boolean" default="true">
+  Applies only to CSV imports.
+</ParamField>
+
+<ParamField body="mapping" type="object">
+  CSV-only. Maps CSV header names to company fields (e.g. `{ "Company": "name", "Website": "domain" }`).
+</ParamField>
+
+<ParamField body="update_existing" type="boolean" default="false">
+  When `true`, rows with matching `domain` are updated; when `false`, they are skipped.
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Optional array of tag strings applied to every imported company.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="job_id" type="string">Import job identifier</ResponseField>
+    <ResponseField name="status" type="string">`completed` or `queued`</ResponseField>
+    <ResponseField name="created_count" type="integer">New companies created</ResponseField>
+    <ResponseField name="updated_count" type="integer">Companies updated</ResponseField>
+    <ResponseField name="skipped_count" type="integer">Rows that were not imported</ResponseField>
+    <ResponseField name="errors" type="array">Array of `{ row_number, code, message }` for any failed rows</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/import/companies \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rows": [
+      { "name": "Acme Corp", "domain": "acme.com", "industry": "Legal Services" }
+    ]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+rows = [
+    {"name": "Acme Corp", "domain": "acme.com", "industry": "Legal Services"},
+    {"name": "Beta LLP", "domain": "beta.com"},
+]
+r = requests.post(
+    f"{BASE_URL}/v1/import/companies",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"rows": rows, "update_existing": True},
+)
+print(r.json()["data"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/import/companies',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      rows: [{ name: 'Acme Corp', domain: 'acme.com' }],
+    }),
+  }
+);
+const { data } = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "job_id": "imp_co_01HY1",
+    "status": "completed",
+    "created_count": 1,
+    "updated_count": 0,
+    "skipped_count": 0,
+    "errors": []
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Neither `rows` nor `csv` provided |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:companies` permission |
+| 413 | `payload_too_large` | Payload exceeds 20 MB |
+| 429 | `rate_limited` | Rate limit exceeded |

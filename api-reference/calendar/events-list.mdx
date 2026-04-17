@@ -1,0 +1,146 @@
+---
+title: "List Calendar Events"
+api: "GET /v1/calendar/events"
+description: "Return a paginated list of calendar events from connected Google or Outlook calendars"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="25">
+  Results per page. Maximum 100.
+</ParamField>
+
+<ParamField query="from_date" type="string">
+  ISO 8601 lower bound on `start_time`. Defaults to the beginning of the current day in the workspace's timezone.
+</ParamField>
+
+<ParamField query="to_date" type="string">
+  ISO 8601 upper bound on `start_time`. Defaults to 30 days after `from_date`.
+</ParamField>
+
+<ParamField query="contact_id" type="string">
+  Filter to events that include the given contact as an attendee.
+</ParamField>
+
+<ParamField query="deal_id" type="string">
+  Filter to events linked to the given deal.
+</ParamField>
+
+<ParamField query="attendee_email" type="string">
+  Filter to events where this email is on the attendee list.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="events" type="array">
+      <Expandable title="Event object">
+        <ResponseField name="id" type="string">Event identifier</ResponseField>
+        <ResponseField name="provider" type="string">`google` or `microsoft`</ResponseField>
+        <ResponseField name="title" type="string">Event title</ResponseField>
+        <ResponseField name="description" type="string">Event description, in plain text</ResponseField>
+        <ResponseField name="location" type="string">Physical or virtual location</ResponseField>
+        <ResponseField name="conference_url" type="string">Meet, Teams, or Zoom URL when present</ResponseField>
+        <ResponseField name="start_time" type="string">ISO 8601 start time</ResponseField>
+        <ResponseField name="end_time" type="string">ISO 8601 end time</ResponseField>
+        <ResponseField name="all_day" type="boolean">Whether this is an all-day event</ResponseField>
+        <ResponseField name="attendees" type="array">Array of `{ email, name, response_status }`</ResponseField>
+        <ResponseField name="organizer_email" type="string">Organizer email</ResponseField>
+        <ResponseField name="contact_ids" type="array">Linked contact UUIDs</ResponseField>
+        <ResponseField name="deal_id" type="string">Linked deal UUID, if any</ResponseField>
+        <ResponseField name="status" type="string">`confirmed`, `tentative`, or `cancelled`</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata: `page`, `per_page`, and `total`.
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/calendar/events?per_page=50" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+params = {"per_page": 50, "from_date": "2026-04-01T00:00:00Z"}
+r = requests.get(
+    f"{BASE_URL}/v1/calendar/events",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params=params,
+)
+for event in r.json()["data"]["events"]:
+    print(event["title"], event["start_time"])
+```
+
+```javascript JavaScript
+const url = new URL('https://data.leadlex.com/functions/v1/api-gateway/v1/calendar/events');
+url.searchParams.set('per_page', '50');
+const res = await fetch(url, { headers: { Authorization: 'Bearer wbk_your_api_key_here' } });
+const { data } = await res.json();
+console.log(data.events.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "events": [
+      {
+        "id": "evt_01HYXYZ123",
+        "provider": "google",
+        "title": "Intro call with Jane Doe",
+        "description": "Discuss Series B counsel",
+        "location": "Google Meet",
+        "conference_url": "https://meet.google.com/abc-defg-hij",
+        "start_time": "2026-04-18T15:00:00Z",
+        "end_time": "2026-04-18T15:30:00Z",
+        "all_day": false,
+        "attendees": [
+          { "email": "jane@acme.com", "name": "Jane Doe", "response_status": "accepted" },
+          { "email": "team@emasex.de", "name": "EMA Sex", "response_status": "accepted" }
+        ],
+        "organizer_email": "team@emasex.de",
+        "contact_ids": ["123e4567-e89b-12d3-a456-426614174000"],
+        "deal_id": null,
+        "status": "confirmed"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 14 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:calendar` permission or no connected calendar |
+| 429 | `rate_limited` | Rate limit exceeded |

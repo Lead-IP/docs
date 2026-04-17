@@ -1,0 +1,187 @@
+---
+title: "Event Catalog"
+api: "GET /v1/events/catalog"
+description: "List every webhook event type the platform emits, with schemas and example payloads"
+---
+
+## Request
+
+Use this endpoint to discover the full set of webhook event types you can subscribe to via `POST /v1/webhooks`. Every catalog entry includes a JSON Schema for the `data` payload and a fully worked example you can paste into test fixtures.
+
+### Query Parameters
+
+<ParamField query="category" type="string">
+  Optional filter by category: `contact`, `company`, `deal`, `task`, `note`, `email`, `meeting`, `document`, `workflow`, `billing`, `sync`.
+</ParamField>
+
+<ParamField query="version" type="string" default="v1">
+  Catalog version to return. Defaults to the current stable version.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="events" type="array">
+      <Expandable title="Event entry">
+        <ResponseField name="type" type="string">Event type (e.g. `contact.created`)</ResponseField>
+        <ResponseField name="category" type="string">Category tag</ResponseField>
+        <ResponseField name="description" type="string">What triggers the event</ResponseField>
+        <ResponseField name="data_schema" type="object">JSON Schema for the `data` payload</ResponseField>
+        <ResponseField name="example_payload" type="object">A full example delivery body</ResponseField>
+        <ResponseField name="introduced_in" type="string">API version that introduced the event</ResponseField>
+        <ResponseField name="stability" type="string">`stable` or `beta`</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="total" type="integer">Total event types in the catalog</ResponseField>
+  </Expandable>
+</ResponseField>
+
+The catalog currently lists 27 event types across these categories: contact, company, deal, task, note, email, meeting, document, workflow, billing, sync. Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/events/catalog \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/events/catalog",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+for event in r.json()["data"]["events"]:
+    print(event["type"], "-", event["description"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/events/catalog',
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(`${data.total} event types`);
+```
+
+</CodeGroup>
+
+### Example Response (abridged)
+
+```json
+{
+  "data": {
+    "total": 27,
+    "events": [
+      {
+        "type": "contact.created",
+        "category": "contact",
+        "description": "Emitted when a new contact is created via API or UI.",
+        "data_schema": { "type": "object", "properties": { "contact": { "type": "object" } } },
+        "example_payload": {
+          "id": "evt_01HY1",
+          "type": "contact.created",
+          "created_at": "2026-04-17T09:00:00Z",
+          "data": { "contact": { "id": "123e4567-e89b-12d3-a456-426614174000", "full_name": "Jane Doe" } }
+        },
+        "introduced_in": "v1",
+        "stability": "stable"
+      },
+      {
+        "type": "contact.updated",
+        "category": "contact",
+        "description": "Emitted when a contact's fields change.",
+        "example_payload": {
+          "id": "evt_02HY2",
+          "type": "contact.updated",
+          "created_at": "2026-04-17T09:05:00Z",
+          "data": {
+            "contact": { "id": "123e4567-e89b-12d3-a456-426614174000" },
+            "changed_fields": ["job_title"]
+          }
+        },
+        "stability": "stable"
+      },
+      {
+        "type": "deal.stage_changed",
+        "category": "deal",
+        "description": "Emitted when a deal moves between pipeline stages.",
+        "example_payload": {
+          "id": "evt_03HY3",
+          "type": "deal.stage_changed",
+          "created_at": "2026-04-17T09:10:00Z",
+          "data": {
+            "deal": { "id": "deal_01HY1" },
+            "from_stage_id": "stage_qualified",
+            "to_stage_id": "stage_proposal"
+          }
+        },
+        "stability": "stable"
+      },
+      {
+        "type": "email.sent",
+        "category": "email",
+        "description": "Emitted after an outbound email is successfully sent.",
+        "example_payload": {
+          "id": "evt_04HY4",
+          "type": "email.sent",
+          "created_at": "2026-04-17T10:22:11Z",
+          "data": { "message_id": "18c9a4b2e7ff21aa", "to": ["jane@acme.com"] }
+        },
+        "stability": "stable"
+      },
+      {
+        "type": "meeting.scheduled",
+        "category": "meeting",
+        "description": "Emitted when a new calendar event is created that includes any contact.",
+        "example_payload": {
+          "id": "evt_05HY5",
+          "type": "meeting.scheduled",
+          "created_at": "2026-04-17T10:30:00Z",
+          "data": { "event_id": "evt_01HYXYZ123", "title": "Intro call with Jane Doe" }
+        },
+        "stability": "stable"
+      }
+    ]
+  }
+}
+```
+
+## Full Event Type List
+
+Contact events: `contact.created`, `contact.updated`, `contact.deleted`, `contact.merged`, `contact.enriched`.
+
+Company events: `company.created`, `company.updated`, `company.enriched`.
+
+Deal events: `deal.created`, `deal.updated`, `deal.stage_changed`, `deal.closed_won`, `deal.closed_lost`.
+
+Task events: `task.created`, `task.completed`, `task.overdue`.
+
+Note events: `note.created`.
+
+Email events: `email.sent`, `email.received`, `email.sync.completed`.
+
+Meeting events: `meeting.scheduled`, `meeting.cancelled`, `meeting.completed`.
+
+Document events: `document.created`, `document.deleted`.
+
+Workflow events: `workflow.triggered`, `workflow.auto_disabled`.
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:webhooks` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,145 @@
+---
+title: "Import Contacts"
+api: "POST /v1/import/contacts"
+description: "Bulk-import contacts from a JSON array or CSV payload"
+---
+
+## Request
+
+Supply either a structured `rows` array or a raw `csv` string. When CSV is provided, supply a `mapping` that maps CSV column names to contact fields. Imports are processed synchronously for up to 500 rows; larger imports are queued and can be tracked via the returned `job_id`.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Strongly recommended for imports. Same key returns the original result (including `job_id`) within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="rows" type="array">
+  Array of contact objects. Each object accepts the same fields as `POST /v1/contacts`. Provide either `rows` or `csv`.
+</ParamField>
+
+<ParamField body="csv" type="string">
+  Raw CSV text. First line is treated as headers unless `has_header` is `false`. Provide either `rows` or `csv`.
+</ParamField>
+
+<ParamField body="has_header" type="boolean" default="true">
+  Applies only to CSV imports.
+</ParamField>
+
+<ParamField body="mapping" type="object">
+  CSV-only. Maps CSV header names to contact field names (e.g. `{ "Email Address": "email", "Full Name": "full_name" }`). Unknown columns are ignored.
+</ParamField>
+
+<ParamField body="update_existing" type="boolean" default="false">
+  When `true`, rows with matching email or phone are updated; when `false`, they are skipped.
+</ParamField>
+
+<ParamField body="tags" type="array">
+  Optional array of tag strings applied to every imported row.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="job_id" type="string">Import job identifier</ResponseField>
+    <ResponseField name="status" type="string">`completed` (synchronous) or `queued`</ResponseField>
+    <ResponseField name="created_count" type="integer">New contacts created (only present when `completed`)</ResponseField>
+    <ResponseField name="updated_count" type="integer">Contacts updated</ResponseField>
+    <ResponseField name="skipped_count" type="integer">Rows that were not imported</ResponseField>
+    <ResponseField name="errors" type="array">Array of `{ row_number, code, message }` for any failed rows</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`. Large imports emit an `import.completed` webhook event when done.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/import/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rows": [
+      { "full_name": "Jane Doe", "email": "jane@acme.com" },
+      { "full_name": "Bob Smith", "email": "bob@beta.com" }
+    ]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+rows = [
+    {"full_name": "Jane Doe", "email": "jane@acme.com"},
+    {"full_name": "Bob Smith", "email": "bob@beta.com"},
+]
+r = requests.post(
+    f"{BASE_URL}/v1/import/contacts",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"rows": rows, "update_existing": True},
+)
+print(r.json()["data"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/import/contacts',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      rows: [
+        { full_name: 'Jane Doe', email: 'jane@acme.com' },
+        { full_name: 'Bob Smith', email: 'bob@beta.com' },
+      ],
+    }),
+  }
+);
+const { data } = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "job_id": "imp_01HY1",
+    "status": "completed",
+    "created_count": 2,
+    "updated_count": 0,
+    "skipped_count": 0,
+    "errors": []
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Neither `rows` nor `csv` provided, or mapping is malformed |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:contacts` permission |
+| 413 | `payload_too_large` | Payload exceeds 20 MB |
+| 429 | `rate_limited` | Rate limit exceeded |

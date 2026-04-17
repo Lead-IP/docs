@@ -1,0 +1,137 @@
+---
+title: "List Workflows"
+api: "GET /v1/workflows"
+description: "Paginate over automation workflows configured in the workspace"
+---
+
+## Request
+
+Workflows are automation rules that fire when a condition on an entity is met. Use this endpoint to list, audit, or monitor workflow configuration without accessing the UI.
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="25">
+  Results per page. Maximum 100.
+</ParamField>
+
+<ParamField query="enabled" type="boolean">
+  Filter to only enabled or disabled workflows.
+</ParamField>
+
+<ParamField query="condition_entity" type="string">
+  Filter to workflows triggered on a specific entity type: `contact`, `deal`, `task`, `email`, or `meeting`.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Full-text search on workflow names.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="workflows" type="array">
+      <Expandable title="Workflow object">
+        <ResponseField name="id" type="string">Workflow UUID</ResponseField>
+        <ResponseField name="name" type="string">Human-readable name</ResponseField>
+        <ResponseField name="enabled" type="boolean">Active state</ResponseField>
+        <ResponseField name="condition_entity" type="string">Entity type the workflow listens to</ResponseField>
+        <ResponseField name="condition_field" type="string">Field name the condition evaluates</ResponseField>
+        <ResponseField name="condition_operator" type="string">Operator (`equals`, `contains`, `changed_to`, ...)</ResponseField>
+        <ResponseField name="condition_value" type="string">Value compared against the field</ResponseField>
+        <ResponseField name="action_type" type="string">`send_email`, `create_task`, `send_channel_message`, `webhook`, `update_field`</ResponseField>
+        <ResponseField name="action_config" type="object">Action-specific configuration</ResponseField>
+        <ResponseField name="max_triggers_per_day" type="integer">Daily cap before the workflow pauses itself</ResponseField>
+        <ResponseField name="last_triggered_at" type="string">ISO 8601 timestamp, if any</ResponseField>
+        <ResponseField name="created_at" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata.
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/workflows?enabled=true" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/workflows",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"enabled": "true"},
+)
+for wf in r.json()["data"]["workflows"]:
+    print(wf["name"], wf["condition_entity"], wf["action_type"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/workflows?enabled=true',
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.workflows.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "workflows": [
+      {
+        "id": "wf_01HY1",
+        "name": "Notify owner on lost deals",
+        "enabled": true,
+        "condition_entity": "deal",
+        "condition_field": "status",
+        "condition_operator": "changed_to",
+        "condition_value": "lost",
+        "action_type": "send_channel_message",
+        "action_config": {
+          "channel": "slack",
+          "recipient": "{{deal.owner.slack_id}}",
+          "message": "Deal {{deal.name}} was marked lost."
+        },
+        "max_triggers_per_day": 100,
+        "last_triggered_at": "2026-04-17T09:31:00Z",
+        "created_at": "2026-03-01T08:00:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 25, "total": 5 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:workflows` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

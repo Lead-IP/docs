@@ -1,0 +1,190 @@
+---
+title: "Stream Chat with Lexi"
+api: "POST /v1/lexi/chat/stream"
+description: "Send a message to Lexi and receive the response as a Server-Sent Events stream"
+---
+
+<Warning>
+  This endpoint consumes AI credits (typically 1 - 5 credits per request depending on tool usage). If the workspace balance is insufficient, the API returns `402 insufficient_credits` immediately, before any events are streamed.
+</Warning>
+
+## Request
+
+This is the streaming counterpart to `POST /v1/lexi/chat`. The response is a `text/event-stream` that emits incremental events as Lexi reasons through the prompt and uses tools. Because the request is a POST, you must use a fetch-based SSE client - the browser's `EventSource` only supports GET.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+Accept: text/event-stream
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID to deduplicate retries within 24 hours. Credits are charged only on the first successful stream.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="message" type="string" required>
+  User message to send to Lexi. Maximum 12,000 characters.
+</ParamField>
+
+<ParamField body="conversation_id" type="string">
+  Optional conversation UUID. When omitted, a new conversation is created and its ID is emitted in the first `text` event's `conversation_id` metadata.
+</ParamField>
+
+<ParamField body="context" type="object">
+  Optional page / entity context: `contact_id`, `deal_id`, `matter_id`, `company_id`, `page`.
+</ParamField>
+
+<ParamField body="allow_tools" type="boolean" default="true">
+  When `false`, Lexi will not invoke any CRM tools and will respond purely from the conversation context.
+</ParamField>
+
+## Event Types
+
+| Event | Purpose |
+|-------|---------|
+| `thinking` | Intermediate reasoning step. `data: { "text": "..." }`. Safe to ignore if not rendering a progress UI. |
+| `tool_step` | Lexi is about to invoke or has completed a CRM tool. `data: { "tool": "...", "status": "started|completed", "summary": "..." }`. |
+| `text` | Incremental assistant text. `data: { "delta": "...", "conversation_id": "..." }`. Concatenate `delta` values to build the final response. |
+| `done` | Final event with usage metadata. `data: { "credits_remaining": 4840, "message_id": "msg_01HY1" }`. |
+
+The stream terminates with the literal line `data: [DONE]` followed by a newline, consistent with the OpenAI SSE convention.
+
+## Response Format
+
+```
+event: thinking
+data: {"text": "Looking up the contact in your pipeline..."}
+
+event: tool_step
+data: {"tool": "contacts.get", "status": "started"}
+
+event: tool_step
+data: {"tool": "contacts.get", "status": "completed", "summary": "Found 1 contact"}
+
+event: text
+data: {"delta": "Jane Doe is currently", "conversation_id": "conv_01HY1"}
+
+event: text
+data: {"delta": " in the Proposal stage...", "conversation_id": "conv_01HY1"}
+
+event: done
+data: {"credits_remaining": 4840, "message_id": "msg_01HY1"}
+
+data: [DONE]
+```
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID` headers on the initial HTTP response.
+
+<CodeGroup>
+
+```bash cURL
+curl -N -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/chat/stream \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{
+    "message": "Summarize my pipeline",
+    "conversation_id": null
+  }'
+```
+
+```python Python
+import json
+import requests
+import sseclient  # pip install sseclient-py
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+response = requests.post(
+    f"{BASE_URL}/v1/lexi/chat/stream",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    },
+    json={"message": "Summarize my pipeline"},
+    stream=True,
+)
+response.raise_for_status()
+
+client = sseclient.SSEClient(response)
+for event in client.events():
+    if event.data == "[DONE]":
+        break
+    payload = json.loads(event.data)
+    if event.event == "text":
+        print(payload["delta"], end="", flush=True)
+    elif event.event == "tool_step":
+        print(f"\n[tool {payload['tool']} {payload['status']}]")
+```
+
+```javascript JavaScript
+// EventSource cannot POST; use fetch + ReadableStream instead.
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/chat/stream',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+    },
+    body: JSON.stringify({ message: 'Summarize my pipeline' }),
+  }
+);
+
+if (!response.ok || !response.body) {
+  throw new Error(`Lexi stream error: ${response.status}`);
+}
+
+const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+let buffer = '';
+
+while (true) {
+  const { value, done } = await reader.read();
+  if (done) break;
+  buffer += value;
+
+  let idx;
+  while ((idx = buffer.indexOf('\n\n')) !== -1) {
+    const rawEvent = buffer.slice(0, idx);
+    buffer = buffer.slice(idx + 2);
+    if (!rawEvent.trim()) continue;
+
+    const lines = rawEvent.split('\n');
+    let eventName = 'message';
+    let data = '';
+    for (const line of lines) {
+      if (line.startsWith('event:')) eventName = line.slice(6).trim();
+      else if (line.startsWith('data:')) data += line.slice(5).trim();
+    }
+
+    if (data === '[DONE]') { await reader.cancel(); return; }
+
+    const payload = JSON.parse(data);
+    if (eventName === 'text') process.stdout.write(payload.delta);
+    if (eventName === 'tool_step') console.log(`\n[tool ${payload.tool} ${payload.status}]`);
+  }
+}
+```
+
+</CodeGroup>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `message`, or prompt exceeds size limit |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `conversation_not_found` | Supplied `conversation_id` does not exist |
+| 429 | `rate_limited` | Rate limit exceeded |
+
+Errors surface as a single `event: error` in the SSE stream when they occur after the HTTP headers have been sent, with the same `code` / `message` payload as JSON responses. Clients should therefore handle both HTTP-level and in-stream error events.

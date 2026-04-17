@@ -1,0 +1,144 @@
+---
+title: "List Contact Activities"
+api: "GET /v1/contacts/{id}/activities"
+description: "Retrieve the full activity timeline for a contact (calls, emails, notes, meetings, AI actions)"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The contact's unique ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Activities per page (max: 100)
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by activity type: `call`, `email`, `meeting`, `note`, `task`, `ai_action`, `deal_stage_change`, `list_added`, `campaign_sent`, etc.
+</ParamField>
+
+<ParamField query="from_date" type="string">
+  Only activities on or after this ISO 8601 timestamp
+</ParamField>
+
+<ParamField query="to_date" type="string">
+  Only activities on or before this ISO 8601 timestamp
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `activities:read` permission. Activities are returned newest first.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="activities" type="array">
+      Array of activity objects, newest first.
+      <Expandable title="Activity object">
+        <ResponseField name="id" type="string">Activity UUID</ResponseField>
+        <ResponseField name="type" type="string">Activity type (see `type` filter)</ResponseField>
+        <ResponseField name="title" type="string">Short human-readable title</ResponseField>
+        <ResponseField name="description" type="string">Full description or body</ResponseField>
+        <ResponseField name="contact_id" type="string">Linked contact UUID</ResponseField>
+        <ResponseField name="deal_id" type="string">Linked deal UUID (nullable)</ResponseField>
+        <ResponseField name="entity_type" type="string">Type of related entity (`deal`, `task`, `email`, `campaign`)</ResponseField>
+        <ResponseField name="entity_id" type="string">UUID of related entity</ResponseField>
+        <ResponseField name="entity_name" type="string">Human-readable name of related entity</ResponseField>
+        <ResponseField name="metadata" type="object">Type-specific metadata (e.g., call duration, meeting attendees, email subject)</ResponseField>
+        <ResponseField name="created_by_user_id" type="string">UUID of the user (or system) that created the activity</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  <Expandable title="Pagination">
+    <ResponseField name="page" type="integer">Current page</ResponseField>
+    <ResponseField name="per_page" type="integer">Page size</ResponseField>
+    <ResponseField name="total" type="integer">Total activities matching filter</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/activities?type=email" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CONTACT_ID = "123e4567-e89b-12d3-a456-426614174000"
+
+response = requests.get(
+    f"{BASE_URL}/v1/contacts/{CONTACT_ID}/activities",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"type": "email"},
+)
+activities = response.json()["data"]["activities"]
+```
+
+```javascript JavaScript
+const CONTACT_ID = '123e4567-e89b-12d3-a456-426614174000';
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/${CONTACT_ID}/activities?type=email`,
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "activities": [
+      {
+        "id": "act_7f3c4d2a",
+        "type": "email",
+        "title": "Sent: Quick question about Acme Corp",
+        "description": "Hi Jane, ...",
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "deal_id": "3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a",
+        "entity_type": "campaign",
+        "entity_id": "cmp_abc123",
+        "entity_name": "Q2 GC Outreach",
+        "metadata": { "opened": true, "replied": false },
+        "created_by_user_id": "9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d",
+        "created_date": "2026-04-17T14:23:05Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 87 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `activities:read` permission |
+| 404 | `contact_not_found` | No contact with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,101 @@
+---
+title: "Delete Campaign Step"
+api: "DELETE /v1/campaigns/{id}/steps/{step_id}"
+description: "Remove a step from a campaign sequence"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+<ParamField path="step_id" type="string" required>
+  The step's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission.
+</Note>
+
+<Warning>
+  Subsequent step indexes are **compacted** after deletion — a step previously at index 3 becomes index 2. Contacts currently between steps may skip the deleted step. If you want to preserve history, pause the campaign first.
+</Warning>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="deleted" type="boolean">
+      Always `true` on success
+    </ResponseField>
+    <ResponseField name="id" type="string">
+      ID of the deleted step
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/steps/step_2 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+STEP_ID = "step_2"
+
+response = requests.delete(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/steps/{STEP_ID}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+const STEP_ID = 'step_2';
+
+await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/steps/${STEP_ID}`,
+  {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' },
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "deleted": true,
+    "id": "step_2"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 404 | `step_not_found` | No step with this ID in the campaign |
+| 429 | `rate_limited` | Rate limit exceeded |

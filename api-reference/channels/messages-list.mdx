@@ -1,0 +1,134 @@
+---
+title: "List Channel Messages"
+api: "GET /v1/channels/messages"
+description: "Retrieve recent messages across all connected messaging channels"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="channel" type="string">
+  Filter to a single channel: `slack`, `teams`, `whatsapp`, `telegram`, or `email`.
+</ParamField>
+
+<ParamField query="contact_id" type="string">
+  Filter to messages linked to the given contact.
+</ParamField>
+
+<ParamField query="deal_id" type="string">
+  Filter to messages linked to the given deal.
+</ParamField>
+
+<ParamField query="direction" type="string">
+  `inbound` or `outbound`.
+</ParamField>
+
+<ParamField query="after" type="string">
+  ISO 8601 lower bound on `sent_at`.
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="25">
+  Results per page. Maximum 100.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="messages" type="array">
+      <Expandable title="Message object">
+        <ResponseField name="id" type="string">Message identifier</ResponseField>
+        <ResponseField name="channel" type="string">`slack`, `teams`, `whatsapp`, `telegram`, or `email`</ResponseField>
+        <ResponseField name="direction" type="string">`inbound` or `outbound`</ResponseField>
+        <ResponseField name="sender" type="string">Sender identifier (phone, handle, email, or user ID)</ResponseField>
+        <ResponseField name="recipient" type="string">Recipient identifier</ResponseField>
+        <ResponseField name="body" type="string">Message text</ResponseField>
+        <ResponseField name="attachments" type="array">Attachment metadata</ResponseField>
+        <ResponseField name="contact_id" type="string">Linked contact, if resolved</ResponseField>
+        <ResponseField name="deal_id" type="string">Linked deal, if any</ResponseField>
+        <ResponseField name="sent_at" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata: `page`, `per_page`, `total`.
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/channels/messages?channel=slack&per_page=50" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/channels/messages",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"channel": "slack", "per_page": 50},
+)
+for m in r.json()["data"]["messages"]:
+    print(m["sender"], m["body"][:60])
+```
+
+```javascript JavaScript
+const url = new URL('https://data.leadlex.com/functions/v1/api-gateway/v1/channels/messages');
+url.searchParams.set('channel', 'whatsapp');
+const res = await fetch(url, { headers: { Authorization: 'Bearer wbk_your_api_key_here' } });
+const { data } = await res.json();
+console.log(data.messages.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "messages": [
+      {
+        "id": "1713351031.001200",
+        "channel": "slack",
+        "direction": "outbound",
+        "sender": "U01234567",
+        "recipient": "C01234567",
+        "body": "New deal just closed - congrats team!",
+        "attachments": [],
+        "contact_id": null,
+        "deal_id": "deal_01HY1",
+        "sent_at": "2026-04-17T10:30:31Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 214 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:channels` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

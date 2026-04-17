@@ -1,0 +1,125 @@
+---
+title: "Get Lexi Conversation"
+api: "GET /v1/lexi/conversations/{id}"
+description: "Retrieve a single Lexi conversation with its full message history"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Conversation UUID returned by `GET /v1/lexi/conversations`.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include_tool_steps" type="boolean" default="false">
+  When `true`, includes the intermediate tool-invocation records alongside user and assistant messages.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="200">
+  Maximum number of messages to return (most recent first). Maximum 1000.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Conversation UUID</ResponseField>
+    <ResponseField name="title" type="string">Conversation title</ResponseField>
+    <ResponseField name="context" type="object">Entity context: `contact_id`, `deal_id`, `matter_id`, `page`</ResponseField>
+    <ResponseField name="archived" type="boolean">Archive state</ResponseField>
+    <ResponseField name="created_at" type="string">ISO 8601 creation timestamp</ResponseField>
+    <ResponseField name="messages" type="array">
+      <Expandable title="Message object">
+        <ResponseField name="id" type="string">Message UUID</ResponseField>
+        <ResponseField name="role" type="string">`user`, `assistant`, or `tool`</ResponseField>
+        <ResponseField name="content" type="string">Message text</ResponseField>
+        <ResponseField name="tool_calls" type="array">For assistant messages: invoked tools with arguments</ResponseField>
+        <ResponseField name="tool_name" type="string">For tool messages: name of the tool</ResponseField>
+        <ResponseField name="tool_output" type="object">For tool messages: serialized tool output</ResponseField>
+        <ResponseField name="created_at" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/conv_01HY1 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+conv_id = "conv_01HY1"
+
+r = requests.get(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/{conv_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+convo = r.json()["data"]
+print(convo["title"], "messages:", len(convo["messages"]))
+```
+
+```javascript JavaScript
+const id = 'conv_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/${id}`,
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.messages.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "conv_01HY1",
+    "title": "Series B research for Acme Corp",
+    "context": { "contact_id": "123e4567-e89b-12d3-a456-426614174000" },
+    "archived": false,
+    "created_at": "2026-04-15T09:00:00Z",
+    "messages": [
+      {
+        "id": "msg_001",
+        "role": "user",
+        "content": "What do we know about Acme's Series B?",
+        "created_at": "2026-04-15T09:00:00Z"
+      },
+      {
+        "id": "msg_002",
+        "role": "assistant",
+        "content": "Acme raised EUR 40m in March 2026 led by a European fund...",
+        "tool_calls": [],
+        "created_at": "2026-04-15T09:00:05Z"
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:ai` permission |
+| 404 | `not_found` | Conversation not found |
+| 429 | `rate_limited` | Rate limit exceeded |

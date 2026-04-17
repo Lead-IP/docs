@@ -1,0 +1,95 @@
+---
+title: "Delete Campaign"
+api: "DELETE /v1/campaigns/{id}"
+description: "Permanently delete a draft campaign"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission.
+</Note>
+
+<Warning>
+  Only campaigns in `draft` status can be deleted. Pause (`POST /v1/campaigns/{id}/pause`) an active campaign first, or let it complete. This guarantees historical metrics remain attributable. Fires the `campaign.deleted` webhook event.
+</Warning>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="deleted" type="boolean">
+      Always `true` on success
+    </ResponseField>
+    <ResponseField name="id" type="string">
+      ID of the deleted campaign
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.delete(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+
+await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}`,
+  {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' },
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "deleted": true,
+    "id": "cmp_abc123"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 409 | `campaign_not_draft` | Only draft campaigns can be deleted |
+| 429 | `rate_limited` | Rate limit exceeded |

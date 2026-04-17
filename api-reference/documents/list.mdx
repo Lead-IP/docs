@@ -1,0 +1,137 @@
+---
+title: "List Documents"
+api: "GET /v1/documents"
+description: "Paginate over documents stored in the workspace, optionally filtered by folder or tag"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="25">
+  Results per page. Maximum 100.
+</ParamField>
+
+<ParamField query="folder" type="string">
+  Filter to documents in a specific folder path (e.g. `/clients/acme/ndas`).
+</ParamField>
+
+<ParamField query="tag" type="string">
+  Filter to documents with the given tag. Repeat the parameter to require multiple tags.
+</ParamField>
+
+<ParamField query="mime_type" type="string">
+  Filter to a MIME type (e.g. `application/pdf`).
+</ParamField>
+
+<ParamField query="search" type="string">
+  Search against `name` and `description`.
+</ParamField>
+
+<ParamField query="created_after" type="string">
+  ISO 8601 lower bound on `created_at`.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="documents" type="array">
+      <Expandable title="Document object">
+        <ResponseField name="id" type="string">Document UUID</ResponseField>
+        <ResponseField name="name" type="string">Display name</ResponseField>
+        <ResponseField name="description" type="string">Optional description</ResponseField>
+        <ResponseField name="mime_type" type="string">MIME type</ResponseField>
+        <ResponseField name="size_bytes" type="integer">File size in bytes</ResponseField>
+        <ResponseField name="storage_path" type="string">Storage location key</ResponseField>
+        <ResponseField name="folder" type="string">Folder path</ResponseField>
+        <ResponseField name="tags" type="array">Applied tag strings</ResponseField>
+        <ResponseField name="created_by" type="string">User UUID who created the document</ResponseField>
+        <ResponseField name="created_at" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="updated_at" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata: `page`, `per_page`, `total`.
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/documents?folder=/clients/acme&per_page=50" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/documents",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"folder": "/clients/acme", "per_page": 50},
+)
+for d in r.json()["data"]["documents"]:
+    print(d["name"], d["mime_type"], d["size_bytes"])
+```
+
+```javascript JavaScript
+const url = new URL('https://data.leadlex.com/functions/v1/api-gateway/v1/documents');
+url.searchParams.set('folder', '/clients/acme');
+url.searchParams.set('per_page', '50');
+const res = await fetch(url, { headers: { Authorization: 'Bearer wbk_your_api_key_here' } });
+const { data } = await res.json();
+console.log(data.documents.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "documents": [
+      {
+        "id": "doc_01HY1",
+        "name": "Acme-NDA-2026.pdf",
+        "description": "Mutual NDA with Acme Corp",
+        "mime_type": "application/pdf",
+        "size_bytes": 183204,
+        "storage_path": "workspaces/ws_123/documents/doc_01HY1.pdf",
+        "folder": "/clients/acme/ndas",
+        "tags": ["nda", "confidentiality"],
+        "created_by": "usr_01HW0",
+        "created_at": "2026-04-17T09:00:00Z",
+        "updated_at": "2026-04-17T09:00:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 12 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:documents` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

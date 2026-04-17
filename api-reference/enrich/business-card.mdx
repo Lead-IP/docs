@@ -1,0 +1,154 @@
+---
+title: "Scan Business Card"
+api: "POST /v1/scan/business-card"
+description: "Extract contact details from a photo of a business card using OCR and AI parsing"
+---
+
+<Warning>
+  This endpoint consumes 1 enrichment credit per successful scan. Requests that fail to detect any card fields return `409 no_match` and do not consume credits. If the workspace balance is zero, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+Upload either a base64-encoded image or a URL. The endpoint runs OCR, parses the result with an LLM, and returns structured contact fields. It does not create a contact automatically - call `POST /v1/contacts` with the returned data to persist it.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Same image and key returns the cached result within 24 hours without consuming additional credits.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="image_base64" type="string">
+  Base64-encoded image bytes. Supported formats: PNG, JPG, WEBP, HEIC. Maximum 10 MB. Either `image_base64` or `image_url` is required.
+</ParamField>
+
+<ParamField body="image_url" type="string">
+  Public HTTPS URL to fetch the image from. The URL must be reachable within 5 seconds.
+</ParamField>
+
+<ParamField body="language" type="string" default="auto">
+  ISO 639-1 language hint for OCR (e.g. `en`, `de`, `fr`). Defaults to automatic detection.
+</ParamField>
+
+<ParamField body="create_contact" type="boolean" default="false">
+  When `true`, the extracted data is used to create a new contact and the resulting `contact_id` is returned alongside the raw fields.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="fields" type="object">
+      <Expandable title="Extracted fields">
+        <ResponseField name="full_name" type="string">Detected name</ResponseField>
+        <ResponseField name="first_name" type="string">First name</ResponseField>
+        <ResponseField name="last_name" type="string">Last name</ResponseField>
+        <ResponseField name="job_title" type="string">Role or title</ResponseField>
+        <ResponseField name="company_name" type="string">Company name</ResponseField>
+        <ResponseField name="email" type="string">Detected email</ResponseField>
+        <ResponseField name="phone" type="string">Primary phone (E.164 when possible)</ResponseField>
+        <ResponseField name="mobile" type="string">Secondary phone</ResponseField>
+        <ResponseField name="website" type="string">Company website</ResponseField>
+        <ResponseField name="address" type="string">Postal address</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="contact_id" type="string">Present when `create_contact=true`</ResponseField>
+    <ResponseField name="confidence" type="number">Overall confidence (0.0 - 1.0)</ResponseField>
+    <ResponseField name="raw_text" type="string">Raw OCR text for debugging</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Workspace balance after the call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/scan/business-card \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"image_url": "https://example.com/cards/jane.jpg"}'
+```
+
+```python Python
+import base64, requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+with open("jane.jpg", "rb") as f:
+    img = base64.b64encode(f.read()).decode()
+
+r = requests.post(
+    f"{BASE_URL}/v1/scan/business-card",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"image_base64": img, "create_contact": True},
+)
+print(r.json()["data"]["fields"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/scan/business-card',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ image_url: 'https://example.com/cards/jane.jpg' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.fields);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "fields": {
+      "full_name": "Jane Doe",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "job_title": "General Counsel",
+      "company_name": "Acme Corp",
+      "email": "jane@acme.com",
+      "phone": "+1-555-0100",
+      "mobile": null,
+      "website": "https://acme.com",
+      "address": "500 5th Ave, New York, NY 10110"
+    },
+    "contact_id": null,
+    "confidence": 0.88,
+    "raw_text": "Jane Doe\nGeneral Counsel\nAcme Corp\njane@acme.com\n+1-555-0100",
+    "credits_remaining": 4868
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Neither `image_base64` nor `image_url` provided, or image exceeds size cap |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:enrich` permission |
+| 409 | `no_match` | OCR detected no card-like fields |
+| 413 | `payload_too_large` | Image exceeds 10 MB |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,153 @@
+---
+title: "Send Channel Message"
+api: "POST /v1/channels/send"
+description: "Send an outbound message over Slack, Teams, WhatsApp, Telegram, or email"
+---
+
+## Request
+
+LeadLex can send messages through any connected messaging provider. Slack, WhatsApp, and Telegram are fully supported with direct recipient addressing; Microsoft Teams requires an existing conversation context because Teams does not allow unsolicited 1:1 bot messages.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Strongly recommended for outbound messages so that retries do not produce duplicates.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="channel" type="string" required>
+  Provider to send through. One of: `slack`, `teams`, `whatsapp`, `telegram`, `email`.
+</ParamField>
+
+<ParamField body="recipient" type="string" required>
+  Provider-specific recipient identifier:
+  - `slack` — channel ID (e.g. `C01234567`) or user ID (`U01234567`)
+  - `teams` — conversation ID (Teams does not allow unsolicited user DMs; the conversation must already exist)
+  - `whatsapp` — E.164 phone number (e.g. `+14155550100`)
+  - `telegram` — numeric chat ID
+  - `email` — email address
+</ParamField>
+
+<ParamField body="message" type="string" required>
+  Message body. Plain text for SMS-style channels; Slack and Teams also accept mrkdwn / Adaptive Card syntax. Maximum 4,096 characters.
+</ParamField>
+
+<ParamField body="subject" type="string">
+  Subject line, required only for `channel: "email"`.
+</ParamField>
+
+<ParamField body="contact_id" type="string">
+  Optional contact UUID. When provided, the message is logged to the contact timeline.
+</ParamField>
+
+<ParamField body="deal_id" type="string">
+  Optional deal UUID for association.
+</ParamField>
+
+<ParamField body="attachments" type="array">
+  Optional attachments. Each entry accepts `filename`, `mime_type`, and either `content_base64` or `url`.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Provider message ID</ResponseField>
+    <ResponseField name="channel" type="string">The channel used</ResponseField>
+    <ResponseField name="status" type="string">`queued`, `sent`, or `failed`</ResponseField>
+    <ResponseField name="sent_at" type="string">ISO 8601 timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/channels/send \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "slack",
+    "recipient": "C01234567",
+    "message": "New deal just closed - congrats team!"
+  }'
+```
+
+```python Python
+import requests, uuid
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/channels/send",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+        "Idempotency-Key": str(uuid.uuid4()),
+    },
+    json={
+        "channel": "whatsapp",
+        "recipient": "+14155550100",
+        "message": "Hi Jane, happy to confirm tomorrow at 3pm UTC.",
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+    },
+)
+print(r.json()["data"]["id"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/channels/send',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+    body: JSON.stringify({
+      channel: 'telegram',
+      recipient: '123456789',
+      message: 'Reminder: proposal deadline is Friday.',
+    }),
+  }
+);
+const { data } = await res.json();
+console.log(data.id);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "1713351031.001200",
+    "channel": "slack",
+    "status": "sent",
+    "sent_at": "2026-04-17T10:30:31Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Invalid `channel`, missing recipient, or body too long |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:channels` permission or channel not connected |
+| 404 | `conversation_required` | Teams recipient has no existing conversation; user must initiate first |
+| 409 | `idempotency_conflict` | Same `Idempotency-Key` reused with a different payload |
+| 429 | `rate_limited` | Rate limit exceeded |
+| 502 | `provider_error` | Upstream provider returned an error |

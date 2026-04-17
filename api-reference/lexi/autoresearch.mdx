@@ -1,0 +1,160 @@
+---
+title: "Autoresearch"
+api: "POST /v1/lexi/autoresearch"
+description: "Run a deep research task against a contact, company, or freeform query and return a structured briefing"
+---
+
+<Warning>
+  Autoresearch consumes 6 AI credits per call because it spawns multiple tool invocations and web searches. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+Autoresearch synthesizes LeadLex data (CRM, emails, meetings) with authorized web sources into a structured briefing you can render on a contact page or share with the team. Calls usually take 15 - 60 seconds.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID to deduplicate retries within 24 hours. Credits are charged only on the first successful completion.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="query" type="string">
+  Freeform research prompt. Required when neither `contact_id` nor `company_id` is provided.
+</ParamField>
+
+<ParamField body="contact_id" type="string">
+  Optional contact UUID to research. Merged with `query` when both are present.
+</ParamField>
+
+<ParamField body="company_id" type="string">
+  Optional company UUID to research.
+</ParamField>
+
+<ParamField body="depth" type="string" default="standard">
+  `quick` (~15s, 3 credits), `standard` (~30s, 6 credits), or `deep` (~60s, 12 credits).
+</ParamField>
+
+<ParamField body="sources" type="array">
+  Optional whitelist of sources: `crm`, `emails`, `meetings`, `web`, `news`, `linkedin`. Defaults to all authorized sources.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="summary" type="string">Executive summary paragraph</ResponseField>
+    <ResponseField name="key_findings" type="array">Bulleted highlights</ResponseField>
+    <ResponseField name="recent_news" type="array">Each: `title`, `url`, `published_at`, `source`</ResponseField>
+    <ResponseField name="people" type="array">Notable people related to the subject</ResponseField>
+    <ResponseField name="competitors" type="array">Related companies worth tracking</ResponseField>
+    <ResponseField name="talking_points" type="array">Conversation starters for outreach</ResponseField>
+    <ResponseField name="citations" type="array">Sources used, each with `url`, `title`, and `source_type`</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/autoresearch \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+    "depth": "standard"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/lexi/autoresearch",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"contact_id": "123e4567-e89b-12d3-a456-426614174000", "depth": "standard"},
+    timeout=90,
+)
+print(r.json()["data"]["summary"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/autoresearch',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contact_id: '123e4567-e89b-12d3-a456-426614174000' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.summary);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "summary": "Jane Doe, General Counsel at Acme Corp, is leading the legal side of an upcoming Series B round (~EUR 40m). Acme recently expanded into Germany.",
+    "key_findings": [
+      "Series B led by a European fund (announced 2026-03-21)",
+      "Hired two senior engineers in Berlin in the last 30 days",
+      "Previously worked with US counsel for Series A"
+    ],
+    "recent_news": [
+      {
+        "title": "Acme Corp raises EUR 40m Series B",
+        "url": "https://example.com/news/acme-series-b",
+        "published_at": "2026-03-21",
+        "source": "TechEU"
+      }
+    ],
+    "people": [
+      { "name": "Jane Doe", "role": "General Counsel" },
+      { "name": "Kai Bauer", "role": "CFO" }
+    ],
+    "competitors": [{ "name": "Beta Legal Systems" }],
+    "talking_points": [
+      "Congratulate Jane on the raise",
+      "Offer a local DE partner intro for employment law"
+    ],
+    "citations": [
+      { "url": "https://example.com/news/acme-series-b", "title": "Acme raises Series B", "source_type": "news" }
+    ],
+    "credits_remaining": 4842
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing all of `query`, `contact_id`, `company_id` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Supplied contact or company does not exist |
+| 429 | `rate_limited` | Rate limit exceeded |
+| 504 | `research_timeout` | Upstream sources failed to return within the time budget |

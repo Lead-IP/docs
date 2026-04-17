@@ -1,0 +1,117 @@
+---
+title: "Get Workspace Settings"
+api: "GET /v1/settings"
+description: "Return high-level workspace configuration - branding, defaults, locale, and feature flags"
+---
+
+## Request
+
+Returns a snapshot of workspace configuration relevant to API integrations. For per-user preferences, use the Users endpoint instead.
+
+### Query Parameters
+
+_None._
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="workspace_id" type="string">Workspace UUID</ResponseField>
+    <ResponseField name="name" type="string">Workspace display name</ResponseField>
+    <ResponseField name="slug" type="string">URL-safe slug (e.g. `acme-legal`)</ResponseField>
+    <ResponseField name="timezone" type="string">IANA timezone (e.g. `Europe/Berlin`)</ResponseField>
+    <ResponseField name="locale" type="string">BCP 47 locale (e.g. `en-GB`, `de-DE`)</ResponseField>
+    <ResponseField name="currency" type="string">ISO 4217 currency code (e.g. `EUR`)</ResponseField>
+    <ResponseField name="jurisdiction" type="string">ISO 3166-1 alpha-2 default jurisdiction</ResponseField>
+    <ResponseField name="billing" type="object">`plan`, `seats`, `credits_balance`, `trial_ends_at`</ResponseField>
+    <ResponseField name="features" type="object">Feature flag map (e.g. `lexi_autoresearch: true`)</ResponseField>
+    <ResponseField name="branding" type="object">`primary_color`, `logo_url`, `accent_color`</ResponseField>
+    <ResponseField name="retention" type="object">Data retention policy: `audit_log_days`, `soft_delete_days`</ResponseField>
+    <ResponseField name="created_at" type="string">ISO 8601 workspace creation timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/settings \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/settings",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+settings = r.json()["data"]
+print(settings["name"], settings["timezone"], settings["billing"]["plan"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/settings',
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.name, data.timezone);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "workspace_id": "ws_01HY1",
+    "name": "Acme Legal",
+    "slug": "acme-legal",
+    "timezone": "Europe/Berlin",
+    "locale": "de-DE",
+    "currency": "EUR",
+    "jurisdiction": "DE",
+    "billing": {
+      "plan": "growth",
+      "seats": 8,
+      "credits_balance": 4840,
+      "trial_ends_at": null
+    },
+    "features": {
+      "lexi_autoresearch": true,
+      "lexi_chat_stream": true,
+      "document_ai": true
+    },
+    "branding": {
+      "primary_color": "#0f5845",
+      "logo_url": "https://cdn.leadlex.com/tenants/acme/logo.png",
+      "accent_color": "#ff7a00"
+    },
+    "retention": {
+      "audit_log_days": 365,
+      "soft_delete_days": 30
+    },
+    "created_at": "2026-02-11T09:00:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:settings` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

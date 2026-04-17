@@ -1,0 +1,152 @@
+---
+title: "Discover Conferences"
+api: "POST /v1/ai/discover-conferences"
+description: "Surface upcoming industry conferences and events relevant to the workspace"
+---
+
+<Warning>
+  This endpoint consumes 3 AI credits per call. Results are cached per workspace for 24 hours keyed on the request parameters. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID for retry deduplication.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="industry" type="string">
+  Industry focus (e.g. `legal-tech`, `private-equity`, `life-sciences`). Defaults to the workspace's configured industry.
+</ParamField>
+
+<ParamField body="region" type="string">
+  Region filter: `global`, `europe`, `north-america`, `apac`, or an ISO 3166-1 alpha-2 country code.
+</ParamField>
+
+<ParamField body="date_range" type="object">
+  Optional `{ from, to }` window in ISO 8601 dates. Defaults to the next 180 days.
+</ParamField>
+
+<ParamField body="topics" type="array">
+  Optional array of topical keywords to match against conference tracks.
+</ParamField>
+
+<ParamField body="limit" type="integer" default="20">
+  Maximum number of conferences to return. Maximum 100.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="conferences" type="array">
+      <Expandable title="Conference object">
+        <ResponseField name="name" type="string">Conference name</ResponseField>
+        <ResponseField name="url" type="string">Official event URL</ResponseField>
+        <ResponseField name="start_date" type="string">ISO 8601 start date</ResponseField>
+        <ResponseField name="end_date" type="string">ISO 8601 end date</ResponseField>
+        <ResponseField name="location" type="string">City, country (or "virtual")</ResponseField>
+        <ResponseField name="industry_tags" type="array">Matching industry tags</ResponseField>
+        <ResponseField name="topics" type="array">Matching topical tags</ResponseField>
+        <ResponseField name="relevance" type="number">0.0 - 1.0 relevance score</ResponseField>
+        <ResponseField name="attendee_size" type="string">Estimated audience (e.g. `<500`, `500-2000`, `>2000`)</ResponseField>
+        <ResponseField name="reason" type="string">Why this conference was suggested</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="generated_at" type="string">ISO 8601 timestamp the result was computed</ResponseField>
+    <ResponseField name="cache_hit" type="boolean">Whether the response was served from cache</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/ai/discover-conferences \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"industry": "legal-tech", "region": "europe", "limit": 10}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/ai/discover-conferences",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"industry": "legal-tech", "region": "europe", "limit": 10},
+)
+for c in r.json()["data"]["conferences"]:
+    print(c["name"], c["start_date"], c["location"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/ai/discover-conferences',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ industry: 'legal-tech', region: 'europe', limit: 10 }),
+  }
+);
+const { data } = await res.json();
+console.log(data.conferences);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "conferences": [
+      {
+        "name": "Legal Innovators London",
+        "url": "https://legalinnovators.co.uk",
+        "start_date": "2026-06-09",
+        "end_date": "2026-06-10",
+        "location": "London, UK",
+        "industry_tags": ["legal-tech"],
+        "topics": ["ai", "innovation", "gc"],
+        "relevance": 0.92,
+        "attendee_size": "500-2000",
+        "reason": "Flagship UK legal-tech event; several workspace contacts historically attend."
+      }
+    ],
+    "generated_at": "2026-04-17T10:45:00Z",
+    "cache_hit": false,
+    "credits_remaining": 4848
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Invalid `region`, `date_range`, or `limit` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

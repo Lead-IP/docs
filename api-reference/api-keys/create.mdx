@@ -1,0 +1,148 @@
+---
+title: "Create API Key"
+api: "POST /v1/api-keys"
+description: "Mint a new API key. The plaintext secret is returned only on this response."
+---
+
+<Warning>
+  **The plaintext `key` is returned exactly once, in the response to this call.** Store it immediately in a secure secret manager - it cannot be retrieved later. If it is lost, revoke the key and create a new one.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Strongly recommended. Same key returns the original result (including the plaintext secret) within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="name" type="string" required>
+  Human-readable key name. 1 - 120 characters.
+</ParamField>
+
+<ParamField body="permissions" type="array" required>
+  Array of scope strings. At least one is required. Examples: `read:contacts`, `write:contacts`, `read:deals`, `write:deals`, `write:email`, `write:ai`, `admin:api_keys`, `admin:webhooks`.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description explaining the intended use of the key.
+</ParamField>
+
+<ParamField body="rate_limit_tier" type="string">
+  Optional override: `standard` (default), `high`, or `unmetered`. `unmetered` is only available on enterprise plans.
+</ParamField>
+
+<ParamField body="expires_at" type="string">
+  Optional ISO 8601 expiry timestamp. After this time, requests with the key return `401 invalid_key`.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">API key UUID</ResponseField>
+    <ResponseField name="key" type="string">**Plaintext secret. Returned only in this response.**</ResponseField>
+    <ResponseField name="prefix" type="string">First 8 characters of the secret</ResponseField>
+    <ResponseField name="name" type="string">Name</ResponseField>
+    <ResponseField name="description" type="string">Description</ResponseField>
+    <ResponseField name="permissions" type="array">Granted scopes</ResponseField>
+    <ResponseField name="rate_limit_tier" type="string">Rate-limit tier</ResponseField>
+    <ResponseField name="expires_at" type="string">Expiry timestamp</ResponseField>
+    <ResponseField name="created_at" type="string">ISO 8601 creation timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/api-keys \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ingestion worker",
+    "permissions": ["read:contacts", "write:contacts"],
+    "description": "Used by the nightly ingestion job"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+payload = {
+    "name": "Ingestion worker",
+    "permissions": ["read:contacts", "write:contacts"],
+    "description": "Used by the nightly ingestion job",
+}
+r = requests.post(
+    f"{BASE_URL}/v1/api-keys",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json=payload,
+)
+key_info = r.json()["data"]
+print("Store this immediately:", key_info["key"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/api-keys',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: 'Ingestion worker',
+      permissions: ['read:contacts', 'write:contacts'],
+    }),
+  }
+);
+const { data } = await res.json();
+console.warn('Store this immediately:', data.key);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "key_02HY2",
+    "key": "wbk_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+    "prefix": "wbk_live",
+    "name": "Ingestion worker",
+    "description": "Used by the nightly ingestion job",
+    "permissions": ["read:contacts", "write:contacts"],
+    "rate_limit_tier": "standard",
+    "expires_at": null,
+    "created_at": "2026-04-17T11:20:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing required fields or unknown permission scope |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `admin:api_keys` permission |
+| 409 | `duplicate_name` | Key name already in use (active keys only) |
+| 429 | `rate_limited` | Rate limit exceeded |

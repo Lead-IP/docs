@@ -1,0 +1,147 @@
+---
+title: "Suggest Follow-ups"
+api: "POST /v1/ai/suggest-followups"
+description: "Generate personalized follow-up action suggestions for a contact based on recent activity"
+---
+
+<Warning>
+  This endpoint consumes 2 AI credits per call. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID for retry deduplication.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_id" type="string" required>
+  UUID of the contact to generate suggestions for.
+</ParamField>
+
+<ParamField body="count" type="integer" default="3">
+  Number of suggestions to generate (1 - 10).
+</ParamField>
+
+<ParamField body="lookback_days" type="integer" default="60">
+  Window of recent activity to consider.
+</ParamField>
+
+<ParamField body="channels" type="array">
+  Optional whitelist of acceptable channels for suggestions: `email`, `call`, `meeting`, `linkedin`, `whatsapp`. Defaults to all.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="suggestions" type="array">
+      <Expandable title="Suggestion">
+        <ResponseField name="type" type="string">`email`, `call`, `meeting`, `linkedin`, or `whatsapp`</ResponseField>
+        <ResponseField name="title" type="string">Short title describing the action</ResponseField>
+        <ResponseField name="reason" type="string">Why this follow-up was suggested</ResponseField>
+        <ResponseField name="suggested_when" type="string">Natural-language timing hint (e.g. "Tomorrow morning")</ResponseField>
+        <ResponseField name="draft_body" type="string">For email / message types, a draft ready to send</ResponseField>
+        <ResponseField name="confidence" type="number">0.0 - 1.0</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="activity_summary" type="string">Short summary of recent activity that informed the suggestions</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/ai/suggest-followups \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"contact_id": "123e4567-e89b-12d3-a456-426614174000", "count": 3}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/ai/suggest-followups",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"contact_id": "123e4567-e89b-12d3-a456-426614174000", "count": 3},
+)
+for s in r.json()["data"]["suggestions"]:
+    print(s["type"], "-", s["title"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/ai/suggest-followups',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contact_id: '123e4567-e89b-12d3-a456-426614174000' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.suggestions);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "suggestions": [
+      {
+        "type": "email",
+        "title": "Share fee proposal",
+        "reason": "Jane asked for pricing on the last call and hasn't received the proposal yet.",
+        "suggested_when": "Today",
+        "draft_body": "Hi Jane, following up on our call on Tuesday - please find our flat-fee proposal attached...",
+        "confidence": 0.9
+      },
+      {
+        "type": "meeting",
+        "title": "Schedule legal review session",
+        "reason": "Next step in the sales cycle per prior conversation notes.",
+        "suggested_when": "Next week",
+        "draft_body": null,
+        "confidence": 0.78
+      }
+    ],
+    "activity_summary": "3 emails and 1 meeting with Jane in the last 14 days; last touch was a discovery call on 2026-04-15.",
+    "credits_remaining": 4861
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing or malformed `contact_id` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Contact not found in this workspace |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,131 @@
+---
+title: "List Connected Providers"
+api: "GET /v1/settings/providers"
+description: "Return the status of every integration connected to the workspace"
+---
+
+## Request
+
+Use this endpoint to surface integration status to your UI or health checks. It aggregates email, calendar, messaging, and identity providers into a single view.
+
+### Query Parameters
+
+<ParamField query="category" type="string">
+  Optional filter: `email`, `calendar`, `channels`, `identity`, `storage`, `billing`.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="providers" type="array">
+      <Expandable title="Provider status">
+        <ResponseField name="category" type="string">Provider category</ResponseField>
+        <ResponseField name="name" type="string">Provider name (`gmail`, `microsoft`, `slack`, `google_drive`, `stripe`, ...)</ResponseField>
+        <ResponseField name="connected" type="boolean">Whether a valid connection exists</ResponseField>
+        <ResponseField name="account_id" type="string">Provider-side account ID</ResponseField>
+        <ResponseField name="display_name" type="string">Friendly name</ResponseField>
+        <ResponseField name="scopes" type="array">OAuth scopes granted</ResponseField>
+        <ResponseField name="connected_at" type="string">ISO 8601 initial connection timestamp</ResponseField>
+        <ResponseField name="last_sync_at" type="string">ISO 8601 timestamp of last successful sync</ResponseField>
+        <ResponseField name="status" type="string">`healthy`, `degraded`, `needs_reauth`, or `disconnected`</ResponseField>
+        <ResponseField name="error_message" type="string">Human-readable error when not healthy</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/settings/providers \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/settings/providers",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+for p in r.json()["data"]["providers"]:
+    print(p["category"], p["name"], p["status"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/settings/providers',
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+data.providers.forEach((p) => console.log(p.category, p.name, p.status));
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "providers": [
+      {
+        "category": "email",
+        "name": "gmail",
+        "connected": true,
+        "account_id": "team@emasex.de",
+        "display_name": "Team Mailbox",
+        "scopes": ["gmail.readonly", "gmail.send"],
+        "connected_at": "2026-02-11T09:00:00Z",
+        "last_sync_at": "2026-04-17T10:30:00Z",
+        "status": "healthy",
+        "error_message": null
+      },
+      {
+        "category": "calendar",
+        "name": "google",
+        "connected": true,
+        "account_id": "team@emasex.de",
+        "display_name": "Team Calendar",
+        "scopes": ["calendar.readonly"],
+        "connected_at": "2026-02-11T09:00:00Z",
+        "last_sync_at": "2026-04-17T10:30:00Z",
+        "status": "healthy",
+        "error_message": null
+      },
+      {
+        "category": "channels",
+        "name": "slack",
+        "connected": true,
+        "account_id": "T01234567",
+        "display_name": "LeadLex Eng",
+        "scopes": ["chat:write", "channels:history"],
+        "connected_at": "2026-02-20T14:00:00Z",
+        "last_sync_at": "2026-04-17T10:30:00Z",
+        "status": "healthy",
+        "error_message": null
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:settings` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

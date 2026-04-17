@@ -1,0 +1,189 @@
+---
+title: "List Audit Logs"
+api: "GET /v1/audit-logs"
+description: "Retrieve the workspace audit trail for compliance and security investigations (admin-only)"
+---
+
+Returns a paginated, filterable log of every write action performed in the workspace — API calls, user actions, and automations. Essential for SOC 2, ISO 27001, and internal forensics.
+
+<Warning>
+  This endpoint requires an **admin API key**. Standard API keys receive a `403 insufficient_permissions` response.
+</Warning>
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Entries per page (max: 200)
+</ParamField>
+
+<ParamField query="action" type="string">
+  Filter by action: `create`, `update`, `delete`, `login`, `api_access`
+</ParamField>
+
+<ParamField query="user_id" type="string">
+  Filter by the UUID of the acting user (human user only — API keys are filtered separately)
+</ParamField>
+
+<ParamField query="resource_type" type="string">
+  Filter by resource type: `contacts`, `companies`, `deals`, `tasks`, `notes`, `lists`, `campaigns`, `webhooks`, `api_keys`, `users`
+</ParamField>
+
+<ParamField query="from_date" type="string">
+  Only entries on or after this ISO 8601 date/timestamp
+</ParamField>
+
+<ParamField query="to_date" type="string">
+  Only entries on or before this ISO 8601 date/timestamp
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_admin_key_here
+```
+
+<Note>
+  Audit logs are retained for **365 days** and are immutable once written.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="logs" type="array">
+      Array of audit log entries, newest first.
+      <Expandable title="Audit log entry">
+        <ResponseField name="id" type="string">
+          Log entry UUID
+        </ResponseField>
+        <ResponseField name="timestamp" type="string">
+          ISO 8601 timestamp of the action
+        </ResponseField>
+        <ResponseField name="user" type="object">
+          Acting principal
+          <Expandable title="User object">
+            <ResponseField name="id" type="string">User UUID (null for API-key actions)</ResponseField>
+            <ResponseField name="email" type="string">Email address or `api-key:<key_prefix>` identifier</ResponseField>
+            <ResponseField name="type" type="string">`user`, `api_key`, or `system`</ResponseField>
+          </Expandable>
+        </ResponseField>
+        <ResponseField name="action" type="string">
+          Action performed: `create`, `update`, `delete`, `login`, `api_access`
+        </ResponseField>
+        <ResponseField name="resource_type" type="string">
+          Resource name (e.g., `contacts`)
+        </ResponseField>
+        <ResponseField name="resource_id" type="string">
+          UUID of the affected resource
+        </ResponseField>
+        <ResponseField name="details" type="object">
+          Action-specific metadata (HTTP method, path, request ID, diff, etc.)
+        </ResponseField>
+        <ResponseField name="ip_address" type="string">
+          Client IP address (IPv4 or IPv6)
+        </ResponseField>
+        <ResponseField name="user_agent" type="string">
+          Client user-agent string
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  <Expandable title="Pagination">
+    <ResponseField name="page" type="integer">Current page number</ResponseField>
+    <ResponseField name="per_page" type="integer">Entries per page</ResponseField>
+    <ResponseField name="total" type="integer">Total log entries matching the filter</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/audit-logs?action=delete&from_date=2026-04-01&per_page=100" \
+  -H "Authorization: Bearer wbk_your_admin_key_here"
+```
+
+```python Python
+import requests
+
+ADMIN_KEY = "wbk_your_admin_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+response = requests.get(
+    f"{BASE_URL}/v1/audit-logs",
+    headers={"Authorization": f"Bearer {ADMIN_KEY}"},
+    params={
+        "action": "delete",
+        "from_date": "2026-04-01",
+        "per_page": 100,
+    },
+)
+logs = response.json()["data"]["logs"]
+
+for log in logs:
+    print(f"{log['timestamp']}  {log['user']['email']}  {log['action']} {log['resource_type']}/{log['resource_id']}")
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/audit-logs?action=delete&from_date=2026-04-01&per_page=100',
+  { headers: { 'Authorization': 'Bearer wbk_your_admin_key_here' } }
+);
+const { data, meta } = await response.json();
+console.log(`Showing ${data.logs.length} of ${meta.total} entries`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "logs": [
+      {
+        "id": "log_a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "timestamp": "2026-04-17T14:23:05Z",
+        "user": {
+          "id": null,
+          "email": "api-key:wbk_abc12345",
+          "type": "api_key"
+        },
+        "action": "delete",
+        "resource_type": "contacts",
+        "resource_id": "123e4567-e89b-12d3-a456-426614174000",
+        "details": {
+          "method": "DELETE",
+          "path": "/v1/contacts/123e4567-e89b-12d3-a456-426614174000",
+          "request_id": "req_9f8e7d6c5b4a",
+          "status_code": 200
+        },
+        "ip_address": "203.0.113.45",
+        "user_agent": "MyApp/1.0 (python-requests/2.31)"
+      }
+    ]
+  },
+  "meta": {
+    "page": 1,
+    "per_page": 100,
+    "total": 1247
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `admin_key_required` | This endpoint requires an admin-scoped API key |
+| 400 | `invalid_date_range` | `from_date` is after `to_date` |
+| 429 | `rate_limited` | Rate limit exceeded |

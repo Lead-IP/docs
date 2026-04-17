@@ -1,0 +1,117 @@
+---
+title: "List Webhooks"
+api: "GET /v1/webhooks"
+description: "Retrieve all webhook endpoints registered in your workspace"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `webhooks:read` permission.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="webhooks" type="array">
+      Array of webhook endpoint objects
+      <Expandable title="Webhook object">
+        <ResponseField name="id" type="string">
+          Unique webhook ID (UUID)
+        </ResponseField>
+        <ResponseField name="url" type="string">
+          The HTTPS target URL
+        </ResponseField>
+        <ResponseField name="events" type="array">
+          List of subscribed event types
+        </ResponseField>
+        <ResponseField name="description" type="string">
+          Optional human-readable description
+        </ResponseField>
+        <ResponseField name="active" type="boolean">
+          Whether the webhook is currently receiving deliveries
+        </ResponseField>
+        <ResponseField name="last_delivery_status" type="string">
+          Status of the most recent delivery: `success`, `failed`, or `null` if no deliveries yet
+        </ResponseField>
+        <ResponseField name="last_delivery_at" type="string">
+          ISO 8601 timestamp of the most recent delivery attempt
+        </ResponseField>
+        <ResponseField name="created_at" type="string">
+          ISO 8601 timestamp when the webhook was registered
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Warning>
+  The signing secret is **never** returned after creation. If you lose it, delete the webhook and create a new one.
+</Warning>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/webhooks \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {"Authorization": f"Bearer {API_KEY}"}
+response = requests.get(f"{BASE_URL}/v1/webhooks", headers=headers)
+webhooks = response.json()["data"]["webhooks"]
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/webhooks',
+  {
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' }
+  }
+);
+const { data } = await response.json();
+console.log(data.webhooks);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "webhooks": [
+      {
+        "id": "7f3c4d2a-1b8e-4a9c-9d6f-2e5b8c7a1f3d",
+        "url": "https://example.com/leadlex/webhook",
+        "events": ["contact.created", "deal.updated"],
+        "description": "Production CRM sync",
+        "active": true,
+        "last_delivery_status": "success",
+        "last_delivery_at": "2026-04-17T14:23:05Z",
+        "created_at": "2026-03-01T09:12:00Z"
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `webhooks:read` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,81 @@
+---
+title: "Delete Workflow"
+api: "DELETE /v1/workflows/{id}"
+description: "Remove a workflow. Historical trigger logs are retained for audit."
+---
+
+## Request
+
+Deleting a workflow removes it from the evaluation path immediately. Historical trigger logs are retained and can still be fetched via `GET /v1/workflows/{id}/logs`. To pause without deleting, prefer `PATCH /v1/workflows/{id}` with `enabled: false`.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Workflow UUID.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Repeated DELETEs with the same key return the same result without erroring.
+</ParamField>
+
+## Response
+
+On success returns HTTP `204 No Content`. The response carries standard rate-limit headers and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/wf_01HY1 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -i
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+wf_id = "wf_01HY1"
+
+r = requests.delete(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/{wf_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+assert r.status_code == 204, r.text
+```
+
+```javascript JavaScript
+const id = 'wf_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/${id}`,
+  {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer wbk_your_api_key_here' },
+  }
+);
+if (res.status !== 204) throw new Error(`Failed: ${res.status}`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```
+HTTP/1.1 204 No Content
+X-Request-ID: req_01HY1K0E7V8Q0YXH7DSTX5B3CA
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:workflows` permission |
+| 404 | `not_found` | Workflow not found |
+| 429 | `rate_limited` | Rate limit exceeded |

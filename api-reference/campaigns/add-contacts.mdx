@@ -1,0 +1,138 @@
+---
+title: "Add Contacts to Campaign"
+api: "POST /v1/campaigns/{id}/contacts"
+description: "Enroll one or more contacts into a campaign"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission. Fires the `campaign.contacts_added` webhook event.
+</Note>
+
+### Body Parameters
+
+<ParamField body="contact_ids" type="array" required>
+  Array of contact UUIDs to enroll. Maximum 500 per request. Duplicates are silently skipped.
+</ParamField>
+
+<ParamField body="source" type="string">
+  Optional free-form tag describing where these contacts came from (e.g., `list:cold-outreach-q2`, `import:csv-2026-04`). Stored on each enrollment for analytics.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="added" type="integer">
+      Number of contacts newly enrolled
+    </ResponseField>
+    <ResponseField name="skipped" type="integer">
+      Number of contacts already enrolled (no-op)
+    </ResponseField>
+    <ResponseField name="contact_ids" type="array">
+      IDs of contacts that were newly added
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/contacts \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact_ids": [
+      "123e4567-e89b-12d3-a456-426614174000",
+      "223e4567-e89b-12d3-a456-426614174001"
+    ],
+    "source": "list:cold-outreach-q2"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.post(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/contacts",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={
+        "contact_ids": [
+            "123e4567-e89b-12d3-a456-426614174000",
+            "223e4567-e89b-12d3-a456-426614174001",
+        ],
+        "source": "list:cold-outreach-q2",
+    },
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+
+await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/contacts`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contact_ids: [
+        '123e4567-e89b-12d3-a456-426614174000',
+        '223e4567-e89b-12d3-a456-426614174001',
+      ],
+      source: 'list:cold-outreach-q2',
+    }),
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "added": 2,
+    "skipped": 0,
+    "contact_ids": [
+      "123e4567-e89b-12d3-a456-426614174000",
+      "223e4567-e89b-12d3-a456-426614174001"
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `too_many_contacts` | More than 500 contacts in a single request |
+| 400 | `missing_required_field` | `contact_ids` missing or empty |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

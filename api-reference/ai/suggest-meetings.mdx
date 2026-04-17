@@ -1,0 +1,146 @@
+---
+title: "Suggest Meetings"
+api: "POST /v1/ai/suggest-meetings"
+description: "Suggest who the user should meet next across their pipeline, ranked by opportunity value"
+---
+
+<Warning>
+  This endpoint consumes 3 AI credits per call. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID for retry deduplication.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_ids" type="array">
+  Optional array of contact UUIDs to rank. When omitted, the endpoint considers the entire pipeline.
+</ParamField>
+
+<ParamField body="window_days" type="integer" default="14">
+  Horizon in days for the suggested meeting time.
+</ParamField>
+
+<ParamField body="count" type="integer" default="5">
+  Number of suggestions to return (1 - 20).
+</ParamField>
+
+<ParamField body="only_open_deals" type="boolean" default="true">
+  Restrict to contacts associated with open deals.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="suggestions" type="array">
+      <Expandable title="Meeting suggestion">
+        <ResponseField name="contact_id" type="string">Suggested contact UUID</ResponseField>
+        <ResponseField name="contact_name" type="string">Contact display name</ResponseField>
+        <ResponseField name="reason" type="string">Why the meeting is recommended</ResponseField>
+        <ResponseField name="deal_id" type="string">Associated deal UUID, if any</ResponseField>
+        <ResponseField name="opportunity_value" type="number">Expected deal value in EUR</ResponseField>
+        <ResponseField name="priority" type="string">`high`, `medium`, or `low`</ResponseField>
+        <ResponseField name="suggested_agenda" type="array">3 - 5 bullet points for the agenda</ResponseField>
+        <ResponseField name="suggested_when" type="string">Natural-language timing recommendation</ResponseField>
+        <ResponseField name="confidence" type="number">0.0 - 1.0</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/ai/suggest-meetings \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"count": 5, "window_days": 14}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/ai/suggest-meetings",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"count": 5, "window_days": 14},
+)
+for s in r.json()["data"]["suggestions"]:
+    print(s["contact_name"], s["priority"], s["opportunity_value"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/ai/suggest-meetings',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ count: 5 }),
+  }
+);
+const { data } = await res.json();
+console.log(data.suggestions);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "suggestions": [
+      {
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "contact_name": "Jane Doe",
+        "reason": "Open deal in Proposal stage with no meeting scheduled in the last 21 days.",
+        "deal_id": "deal_01HY1",
+        "opportunity_value": 45000,
+        "priority": "high",
+        "suggested_agenda": [
+          "Review fee proposal",
+          "Walk through engagement scope",
+          "Confirm kick-off date"
+        ],
+        "suggested_when": "Within the next 3 business days",
+        "confidence": 0.87
+      }
+    ],
+    "credits_remaining": 4858
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Invalid `count` or `window_days` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

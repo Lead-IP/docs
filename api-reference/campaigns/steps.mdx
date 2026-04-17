@@ -1,0 +1,130 @@
+---
+title: "List Campaign Steps"
+api: "GET /v1/campaigns/{id}/steps"
+description: "Retrieve all sequence steps for a campaign in order"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:read` permission. Steps are returned in send order (index 0 first).
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="steps" type="array">
+      Array of step objects in sequence order.
+      <Expandable title="Step object">
+        <ResponseField name="id" type="string">
+          Step UUID
+        </ResponseField>
+        <ResponseField name="index" type="integer">
+          Zero-based position in the sequence
+        </ResponseField>
+        <ResponseField name="subject" type="string">
+          Email subject line (supports merge variables like `{{first_name}}`)
+        </ResponseField>
+        <ResponseField name="body" type="string">
+          Email body (HTML or plain text)
+        </ResponseField>
+        <ResponseField name="delay_days" type="integer">
+          Days to wait after the previous step
+        </ResponseField>
+        <ResponseField name="delay_hours" type="integer">
+          Additional hours to wait after the previous step
+        </ResponseField>
+        <ResponseField name="send_condition" type="string">
+          When to send: `always`, `if_no_reply`, `if_no_open`, `if_opened`, `if_clicked`
+        </ResponseField>
+        <ResponseField name="created_at" type="string">
+          ISO 8601 timestamp
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/steps \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.get(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/steps",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+steps = response.json()["data"]["steps"]
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/steps`,
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "steps": [
+      {
+        "id": "step_1",
+        "index": 0,
+        "subject": "Quick question about {{company_name}}",
+        "body": "Hi {{first_name}}, ...",
+        "delay_days": 0,
+        "delay_hours": 0,
+        "send_condition": "always",
+        "created_at": "2026-03-15T09:00:00Z"
+      },
+      {
+        "id": "step_2",
+        "index": 1,
+        "subject": "Re: {{company_name}}",
+        "body": "Just circling back ...",
+        "delay_days": 3,
+        "delay_hours": 0,
+        "send_condition": "if_no_reply",
+        "created_at": "2026-03-15T09:05:00Z"
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:read` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

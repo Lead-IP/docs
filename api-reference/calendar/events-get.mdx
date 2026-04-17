@@ -1,0 +1,129 @@
+---
+title: "Get Calendar Event"
+api: "GET /v1/calendar/events/{id}"
+description: "Retrieve a single calendar event with the complete attendee list and linked entities"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Event identifier returned by `GET /v1/calendar/events`.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Event identifier</ResponseField>
+    <ResponseField name="provider" type="string">`google` or `microsoft`</ResponseField>
+    <ResponseField name="title" type="string">Event title</ResponseField>
+    <ResponseField name="description" type="string">Description</ResponseField>
+    <ResponseField name="location" type="string">Location</ResponseField>
+    <ResponseField name="conference_url" type="string">Conference URL</ResponseField>
+    <ResponseField name="start_time" type="string">ISO 8601 start time</ResponseField>
+    <ResponseField name="end_time" type="string">ISO 8601 end time</ResponseField>
+    <ResponseField name="all_day" type="boolean">True for all-day events</ResponseField>
+    <ResponseField name="recurrence_rule" type="string">RFC 5545 RRULE string, if recurring</ResponseField>
+    <ResponseField name="attendees" type="array">
+      <Expandable title="Attendee">
+        <ResponseField name="email" type="string">Attendee email</ResponseField>
+        <ResponseField name="name" type="string">Display name</ResponseField>
+        <ResponseField name="response_status" type="string">`accepted`, `declined`, `tentative`, or `needsAction`</ResponseField>
+        <ResponseField name="contact_id" type="string">Resolved contact UUID, if any</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="organizer_email" type="string">Organizer email</ResponseField>
+    <ResponseField name="contact_ids" type="array">Linked contact UUIDs</ResponseField>
+    <ResponseField name="deal_id" type="string">Linked deal UUID</ResponseField>
+    <ResponseField name="task_ids" type="array">Linked task UUIDs</ResponseField>
+    <ResponseField name="status" type="string">`confirmed`, `tentative`, or `cancelled`</ResponseField>
+    <ResponseField name="created_at" type="string">ISO 8601 creation timestamp</ResponseField>
+    <ResponseField name="updated_at" type="string">ISO 8601 update timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/calendar/events/evt_01HYXYZ123 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+event_id = "evt_01HYXYZ123"
+
+r = requests.get(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/calendar/events/{event_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+event = r.json()["data"]
+print(event["title"], "attendees:", len(event["attendees"]))
+```
+
+```javascript JavaScript
+const eventId = 'evt_01HYXYZ123';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/calendar/events/${eventId}`,
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.title, data.attendees.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "evt_01HYXYZ123",
+    "provider": "google",
+    "title": "Intro call with Jane Doe",
+    "description": "Discuss Series B counsel",
+    "location": "Google Meet",
+    "conference_url": "https://meet.google.com/abc-defg-hij",
+    "start_time": "2026-04-18T15:00:00Z",
+    "end_time": "2026-04-18T15:30:00Z",
+    "all_day": false,
+    "recurrence_rule": null,
+    "attendees": [
+      {
+        "email": "jane@acme.com",
+        "name": "Jane Doe",
+        "response_status": "accepted",
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000"
+      }
+    ],
+    "organizer_email": "team@emasex.de",
+    "contact_ids": ["123e4567-e89b-12d3-a456-426614174000"],
+    "deal_id": null,
+    "task_ids": [],
+    "status": "confirmed",
+    "created_at": "2026-04-10T08:00:00Z",
+    "updated_at": "2026-04-12T08:00:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:calendar` permission |
+| 404 | `not_found` | Event not found in this workspace |
+| 429 | `rate_limited` | Rate limit exceeded |

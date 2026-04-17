@@ -1,0 +1,116 @@
+---
+title: "Bulk Delete Contacts"
+api: "POST /v1/contacts/bulk-delete"
+description: "Delete up to 500 contacts in a single call"
+---
+
+## Request
+
+Deletion is permanent for the contact row and its direct properties. Associated activities, notes, and tasks are preserved in the timeline but lose their contact back-reference. To merge rather than delete, use `POST /v1/contacts/merge`.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Strongly recommended. The same key returns the original result within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_ids" type="array" required>
+  Array of contact UUIDs to delete. Maximum 500.
+</ParamField>
+
+<ParamField body="dry_run" type="boolean" default="false">
+  When `true`, the API validates input and returns counts but makes no changes.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="deleted_count" type="integer">Number of contacts successfully deleted</ResponseField>
+    <ResponseField name="not_found_count" type="integer">Input IDs that did not exist in this workspace</ResponseField>
+    <ResponseField name="errors" type="array">Array of `{ contact_id, code, message }` for rows that failed</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`. Each successful deletion emits a `contact.deleted` webhook event.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/bulk-delete \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact_ids": [
+      "123e4567-e89b-12d3-a456-426614174000",
+      "456e7890-a1b2-34c5-d678-901234567890"
+    ]
+  }'
+```
+
+```python Python
+import requests, uuid
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+ids = ["123e4567-e89b-12d3-a456-426614174000"]
+r = requests.post(
+    f"{BASE_URL}/v1/contacts/bulk-delete",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+        "Idempotency-Key": str(uuid.uuid4()),
+    },
+    json={"contact_ids": ids},
+)
+print(r.json()["data"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/bulk-delete',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+      'Idempotency-Key': crypto.randomUUID(),
+    },
+    body: JSON.stringify({ contact_ids: ['123e4567-e89b-12d3-a456-426614174000'] }),
+  }
+);
+const { data } = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "deleted_count": 2,
+    "not_found_count": 0,
+    "errors": []
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | More than 500 IDs or missing `contact_ids` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:contacts` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

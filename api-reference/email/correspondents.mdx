@@ -1,0 +1,116 @@
+---
+title: "List Top Correspondents"
+api: "GET /v1/email/correspondents"
+description: "Return the workspace's most frequent email correspondents, sorted by activity"
+---
+
+## Request
+
+This endpoint is the fastest way to surface the people your team is actively emailing, ranked by recency and volume. It is the data source behind the sidebar's "Top correspondents" widget.
+
+### Query Parameters
+
+<ParamField query="limit" type="integer" default="25">
+  Number of correspondents to return. Maximum 200.
+</ParamField>
+
+<ParamField query="since" type="string">
+  Optional ISO 8601 lower-bound on the messages considered (e.g. the last 30 days).
+</ParamField>
+
+<ParamField query="user_id" type="string">
+  Scope the aggregation to a single user in the workspace. When omitted, every connected mailbox is aggregated.
+</ParamField>
+
+<ParamField query="min_messages" type="integer" default="2">
+  Exclude correspondents who have exchanged fewer than this number of messages.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="correspondents" type="array">
+      <Expandable title="Correspondent object">
+        <ResponseField name="email" type="string">Correspondent's email address</ResponseField>
+        <ResponseField name="display_name" type="string">Best-known display name from thread metadata</ResponseField>
+        <ResponseField name="contact_id" type="string">Linked contact UUID, when resolved</ResponseField>
+        <ResponseField name="company_name" type="string">Company inferred from the email domain</ResponseField>
+        <ResponseField name="message_count" type="integer">Total messages exchanged</ResponseField>
+        <ResponseField name="sent_count" type="integer">Outbound messages</ResponseField>
+        <ResponseField name="received_count" type="integer">Inbound messages</ResponseField>
+        <ResponseField name="last_message_at" type="string">ISO 8601 timestamp of the most recent message</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID` headers.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/email/correspondents?limit=50" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/email/correspondents",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"limit": 50},
+)
+for c in r.json()["data"]["correspondents"]:
+    print(c["display_name"], c["message_count"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/email/correspondents?limit=50',
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+data.correspondents.forEach((c) => console.log(c.display_name, c.message_count));
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "correspondents": [
+      {
+        "email": "jane@acme.com",
+        "display_name": "Jane Doe",
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "company_name": "Acme Corp",
+        "message_count": 42,
+        "sent_count": 21,
+        "received_count": 21,
+        "last_message_at": "2026-04-17T09:14:00Z"
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:email` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

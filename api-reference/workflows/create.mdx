@@ -1,0 +1,185 @@
+---
+title: "Create Workflow"
+api: "POST /v1/workflows"
+description: "Define a new automation workflow that triggers on entity changes"
+---
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID for retry deduplication within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="name" type="string" required>
+  Human-readable name. 1 - 120 characters.
+</ParamField>
+
+<ParamField body="condition_entity" type="string" required>
+  Entity type to listen on: `contact`, `deal`, `task`, `email`, or `meeting`.
+</ParamField>
+
+<ParamField body="condition_field" type="string" required>
+  Field on the entity to evaluate (e.g. `status`, `stage_id`, `tags`).
+</ParamField>
+
+<ParamField body="condition_operator" type="string" required>
+  Operator: `equals`, `not_equals`, `contains`, `changed`, `changed_to`, `greater_than`, `less_than`.
+</ParamField>
+
+<ParamField body="condition_value" type="string" required>
+  Value to compare against. For `changed` no value is needed but the parameter is still required as an empty string.
+</ParamField>
+
+<ParamField body="action_type" type="string" required>
+  Action to perform: `send_email`, `create_task`, `send_channel_message`, `webhook`, `update_field`.
+</ParamField>
+
+<ParamField body="action_config" type="object" required>
+  Action-specific configuration. Accepts merge tokens referencing the triggering entity (e.g. `{{deal.name}}`).
+</ParamField>
+
+<ParamField body="max_triggers_per_day" type="integer" default="100">
+  Circuit-breaker threshold. When exceeded, the workflow auto-disables and raises an alert.
+</ParamField>
+
+<ParamField body="enabled" type="boolean" default="true">
+  Whether the workflow should be active upon creation.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  The created workflow record (same shape as `GET /v1/workflows/{id}`).
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/workflows \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ping owner on won deals",
+    "condition_entity": "deal",
+    "condition_field": "status",
+    "condition_operator": "changed_to",
+    "condition_value": "won",
+    "action_type": "send_channel_message",
+    "action_config": {
+      "channel": "slack",
+      "recipient": "#sales-wins",
+      "message": "Deal {{deal.name}} closed at {{deal.value}} {{deal.currency}}"
+    },
+    "max_triggers_per_day": 50
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+payload = {
+    "name": "Ping owner on won deals",
+    "condition_entity": "deal",
+    "condition_field": "status",
+    "condition_operator": "changed_to",
+    "condition_value": "won",
+    "action_type": "send_channel_message",
+    "action_config": {
+        "channel": "slack",
+        "recipient": "#sales-wins",
+        "message": "Deal {{deal.name}} closed at {{deal.value}} {{deal.currency}}",
+    },
+    "max_triggers_per_day": 50,
+}
+
+r = requests.post(
+    f"{BASE_URL}/v1/workflows",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json=payload,
+)
+print(r.json()["data"]["id"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/workflows',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: 'Ping owner on won deals',
+      condition_entity: 'deal',
+      condition_field: 'status',
+      condition_operator: 'changed_to',
+      condition_value: 'won',
+      action_type: 'send_channel_message',
+      action_config: {
+        channel: 'slack',
+        recipient: '#sales-wins',
+        message: 'Deal {{deal.name}} closed',
+      },
+      max_triggers_per_day: 50,
+    }),
+  }
+);
+const { data } = await res.json();
+console.log(data.id);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "wf_02HY2",
+    "name": "Ping owner on won deals",
+    "enabled": true,
+    "condition_entity": "deal",
+    "condition_field": "status",
+    "condition_operator": "changed_to",
+    "condition_value": "won",
+    "action_type": "send_channel_message",
+    "action_config": {
+      "channel": "slack",
+      "recipient": "#sales-wins",
+      "message": "Deal {{deal.name}} closed at {{deal.value}} {{deal.currency}}"
+    },
+    "max_triggers_per_day": 50,
+    "last_triggered_at": null,
+    "created_at": "2026-04-17T11:05:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing required fields or unsupported operator/action combination |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:workflows` permission |
+| 409 | `duplicate_name` | A workflow with this name already exists |
+| 429 | `rate_limited` | Rate limit exceeded |

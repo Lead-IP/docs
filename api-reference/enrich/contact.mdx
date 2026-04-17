@@ -1,0 +1,132 @@
+---
+title: "Enrich Contact"
+api: "POST /v1/enrich/contact"
+description: "Fill in missing fields on an existing contact using third-party data providers"
+---
+
+<Warning>
+  This endpoint consumes enrichment credits. Each successful enrichment costs 1 credit. If the workspace's balance is zero, the API returns `402 insufficient_credits` and the contact is not modified.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID to deduplicate retried enrichment requests within 24 hours. The credit is charged only on the first successful call.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_id" type="string" required>
+  UUID of the contact to enrich.
+</ParamField>
+
+<ParamField body="fields" type="array">
+  Optional whitelist of fields to update. Defaults to every safe-to-fill field (`job_title`, `company_name`, `linkedin_url`, `phone`, `location`, `seniority`).
+</ParamField>
+
+<ParamField body="overwrite" type="boolean" default="false">
+  When `true`, the enrichment can overwrite non-empty fields. By default only empty fields are populated.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="contact" type="object">The updated contact with enrichment applied</ResponseField>
+    <ResponseField name="fields_updated" type="array">Names of fields that changed</ResponseField>
+    <ResponseField name="source" type="string">Provider that supplied the data</ResponseField>
+    <ResponseField name="confidence" type="number">Confidence score (0.0 - 1.0)</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Credit balance after the call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/contact \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact_id": "123e4567-e89b-12d3-a456-426614174000"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/enrich/contact",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"contact_id": "123e4567-e89b-12d3-a456-426614174000"},
+)
+print(r.json()["data"]["fields_updated"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/contact',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contact_id: '123e4567-e89b-12d3-a456-426614174000' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.fields_updated);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "contact": {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "full_name": "Jane Doe",
+      "email": "jane@acme.com",
+      "job_title": "General Counsel",
+      "company_name": "Acme Corp",
+      "linkedin_url": "https://linkedin.com/in/janedoe",
+      "phone": "+1-555-0100",
+      "location": "New York, NY, US"
+    },
+    "fields_updated": ["job_title", "company_name", "linkedin_url", "location"],
+    "source": "vendor_a",
+    "confidence": 0.91,
+    "credits_remaining": 4871
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | `contact_id` missing or malformed |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:enrich` permission |
+| 404 | `not_found` | Contact not found in this workspace |
+| 409 | `no_match` | Upstream providers returned no data for the contact |
+| 429 | `rate_limited` | Rate limit exceeded |

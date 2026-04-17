@@ -1,0 +1,101 @@
+---
+title: "Remove Contact from Campaign"
+api: "DELETE /v1/campaigns/{id}/contacts/{contact_id}"
+description: "Unenroll a single contact from a campaign; already-sent emails are unaffected"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+<ParamField path="contact_id" type="string" required>
+  The contact's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission. Any future scheduled sends for this contact in this campaign are cancelled; emails already dispatched are not recalled.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="removed" type="boolean">
+      Always `true` on success
+    </ResponseField>
+    <ResponseField name="campaign_id" type="string">
+      Campaign ID
+    </ResponseField>
+    <ResponseField name="contact_id" type="string">
+      Contact ID that was removed
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/contacts/123e4567-e89b-12d3-a456-426614174000 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+CONTACT_ID = "123e4567-e89b-12d3-a456-426614174000"
+
+response = requests.delete(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/contacts/{CONTACT_ID}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+const CONTACT_ID = '123e4567-e89b-12d3-a456-426614174000';
+
+await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/contacts/${CONTACT_ID}`,
+  {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' },
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "removed": true,
+    "campaign_id": "cmp_abc123",
+    "contact_id": "123e4567-e89b-12d3-a456-426614174000"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 404 | `enrollment_not_found` | Contact is not enrolled in this campaign |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,81 @@
+---
+title: "Delete Lexi Conversation"
+api: "DELETE /v1/lexi/conversations/{id}"
+description: "Permanently delete a Lexi conversation and its message history"
+---
+
+## Request
+
+Deleting a conversation is irreversible. The conversation row and all of its messages and tool-invocation records are removed. If you merely want to hide a conversation from the sidebar, use `PATCH /v1/lexi/conversations/{id}` with `archived: true` instead.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Conversation UUID to delete.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Repeated DELETEs with the same key return the same result without erroring.
+</ParamField>
+
+## Response
+
+On success returns HTTP `204 No Content` with an empty body. The response still carries `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID` headers for observability.
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/conv_01HY1 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -i
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+conv_id = "conv_01HY1"
+
+r = requests.delete(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/{conv_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+assert r.status_code == 204, r.text
+```
+
+```javascript JavaScript
+const id = 'conv_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/${id}`,
+  {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer wbk_your_api_key_here' },
+  }
+);
+if (res.status !== 204) throw new Error(`Failed: ${res.status}`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```
+HTTP/1.1 204 No Content
+X-Request-ID: req_01HY1K0E7V8Q0YXH7DSTX5B3CA
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Conversation not found |
+| 429 | `rate_limited` | Rate limit exceeded |

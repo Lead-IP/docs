@@ -1,0 +1,144 @@
+---
+title: "Analyze Document"
+api: "POST /v1/ai/analyze-document"
+description: "Extract structured insights from a stored document - summary, clauses, entities, and risks"
+---
+
+<Warning>
+  This endpoint consumes AI credits based on document size: 3 credits for documents up to 10 pages, 6 credits up to 50 pages, and 12 credits up to 250 pages. Documents larger than 250 pages are rejected with `413 payload_too_large`. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Deduplicates retries within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="document_id" type="string" required>
+  UUID of a document stored via `POST /v1/documents`.
+</ParamField>
+
+<ParamField body="sections" type="array">
+  Optional subset of sections to produce: `summary`, `clauses`, `entities`, `risks`, `obligations`, `dates`, `amounts`, `signatories`. Defaults to all.
+</ParamField>
+
+<ParamField body="prompt" type="string">
+  Optional free-form instruction to steer the analysis (e.g. "focus on indemnity and limitation of liability clauses").
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="summary" type="string">One-paragraph summary of the document</ResponseField>
+    <ResponseField name="clauses" type="array">Detected clauses, each with `type`, `title`, `text`, `page`</ResponseField>
+    <ResponseField name="entities" type="array">Named entities: `type` (person/company/jurisdiction/court), `name`, `page`</ResponseField>
+    <ResponseField name="risks" type="array">Each with `description` and `severity`</ResponseField>
+    <ResponseField name="obligations" type="array">Parties' obligations extracted from the document</ResponseField>
+    <ResponseField name="dates" type="array">Detected dates with context</ResponseField>
+    <ResponseField name="amounts" type="array">Monetary amounts with `currency` and `context`</ResponseField>
+    <ResponseField name="signatories" type="array">Detected signatories: `name`, `role`, `party`</ResponseField>
+    <ResponseField name="page_count" type="integer">Total pages analyzed</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/ai/analyze-document \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"document_id": "doc_01HY1", "sections": ["summary", "risks", "clauses"]}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/ai/analyze-document",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"document_id": "doc_01HY1"},
+)
+print(r.json()["data"]["summary"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/ai/analyze-document',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ document_id: 'doc_01HY1' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.summary);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "summary": "Mutual non-disclosure agreement between Acme Corp and EMA Sex, effective April 17 2026, with a two-year term and carve-outs for regulatory disclosure.",
+    "clauses": [
+      { "type": "term", "title": "Term", "text": "This Agreement shall remain in effect for a period of two (2) years from the Effective Date...", "page": 2 }
+    ],
+    "entities": [
+      { "type": "company", "name": "Acme Corp", "page": 1 },
+      { "type": "company", "name": "EMA Sex", "page": 1 }
+    ],
+    "risks": [
+      { "description": "No explicit residuals clause", "severity": "medium" }
+    ],
+    "obligations": [
+      { "party": "Receiving Party", "description": "Keep Confidential Information secret" }
+    ],
+    "dates": [
+      { "context": "Effective date", "value": "2026-04-17" }
+    ],
+    "amounts": [],
+    "signatories": [
+      { "name": "Jane Doe", "role": "General Counsel", "party": "Acme Corp" }
+    ],
+    "page_count": 4,
+    "credits_remaining": 4851
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing or malformed `document_id` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Document not found |
+| 413 | `payload_too_large` | Document exceeds the 250-page limit |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,112 @@
+---
+title: "Get Workflow"
+api: "GET /v1/workflows/{id}"
+description: "Retrieve a single workflow configuration and its runtime state"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Workflow UUID.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Workflow UUID</ResponseField>
+    <ResponseField name="name" type="string">Name</ResponseField>
+    <ResponseField name="enabled" type="boolean">Active state</ResponseField>
+    <ResponseField name="condition_entity" type="string">Entity type</ResponseField>
+    <ResponseField name="condition_field" type="string">Field evaluated</ResponseField>
+    <ResponseField name="condition_operator" type="string">Operator</ResponseField>
+    <ResponseField name="condition_value" type="string">Value compared against</ResponseField>
+    <ResponseField name="action_type" type="string">Action type</ResponseField>
+    <ResponseField name="action_config" type="object">Action configuration</ResponseField>
+    <ResponseField name="max_triggers_per_day" type="integer">Daily cap</ResponseField>
+    <ResponseField name="triggers_today" type="integer">Number of times triggered in the current day</ResponseField>
+    <ResponseField name="last_triggered_at" type="string">ISO 8601 timestamp, if any</ResponseField>
+    <ResponseField name="auto_disabled_reason" type="string">If auto-disabled, why (e.g. `daily_cap_exceeded`)</ResponseField>
+    <ResponseField name="created_at" type="string">ISO 8601 timestamp</ResponseField>
+    <ResponseField name="updated_at" type="string">ISO 8601 timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/wf_01HY1 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+wf_id = "wf_01HY1"
+
+r = requests.get(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/{wf_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+print(r.json()["data"])
+```
+
+```javascript JavaScript
+const id = 'wf_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/${id}`,
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "wf_01HY1",
+    "name": "Notify owner on lost deals",
+    "enabled": true,
+    "condition_entity": "deal",
+    "condition_field": "status",
+    "condition_operator": "changed_to",
+    "condition_value": "lost",
+    "action_type": "send_channel_message",
+    "action_config": {
+      "channel": "slack",
+      "recipient": "{{deal.owner.slack_id}}",
+      "message": "Deal {{deal.name}} was marked lost."
+    },
+    "max_triggers_per_day": 100,
+    "triggers_today": 3,
+    "last_triggered_at": "2026-04-17T09:31:00Z",
+    "auto_disabled_reason": null,
+    "created_at": "2026-03-01T08:00:00Z",
+    "updated_at": "2026-04-17T09:31:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:workflows` permission |
+| 404 | `not_found` | Workflow not found |
+| 429 | `rate_limited` | Rate limit exceeded |

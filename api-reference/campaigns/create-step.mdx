@@ -1,0 +1,145 @@
+---
+title: "Create Campaign Step"
+api: "POST /v1/campaigns/{id}/steps"
+description: "Append a new email step to a campaign sequence"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission. New steps are appended to the end of the sequence. Fires the `campaign.step_created` webhook event.
+</Note>
+
+### Body Parameters
+
+<ParamField body="subject" type="string" required>
+  Email subject line. Supports merge variables: `{{first_name}}`, `{{last_name}}`, `{{company_name}}`, `{{job_title}}`.
+</ParamField>
+
+<ParamField body="body" type="string" required>
+  Email body. Plain text or HTML.
+</ParamField>
+
+<ParamField body="delay_days" type="integer" default="0">
+  Days to wait after the previous step before sending this one.
+</ParamField>
+
+<ParamField body="delay_hours" type="integer" default="0">
+  Additional hours on top of `delay_days` (0–23).
+</ParamField>
+
+<ParamField body="send_condition" type="string" default="always">
+  When to send: `always`, `if_no_reply`, `if_no_open`, `if_opened`, `if_clicked`.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="step" type="object">
+      Full step object (same shape as `GET /v1/campaigns/{id}/steps`).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/steps \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subject": "Re: {{company_name}}",
+    "body": "Just circling back on my note from last week...",
+    "delay_days": 3,
+    "send_condition": "if_no_reply"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.post(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/steps",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={
+        "subject": "Re: {{company_name}}",
+        "body": "Just circling back on my note from last week...",
+        "delay_days": 3,
+        "send_condition": "if_no_reply",
+    },
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+
+await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/steps`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      subject: 'Re: {{company_name}}',
+      body: 'Just circling back on my note from last week...',
+      delay_days: 3,
+      send_condition: 'if_no_reply',
+    }),
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "step": {
+      "id": "step_2",
+      "index": 1,
+      "subject": "Re: {{company_name}}",
+      "body": "Just circling back on my note from last week...",
+      "delay_days": 3,
+      "delay_hours": 0,
+      "send_condition": "if_no_reply",
+      "created_at": "2026-04-17T14:30:00Z"
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `missing_required_field` | `subject` or `body` missing |
+| 400 | `invalid_send_condition` | `send_condition` is not a recognized value |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

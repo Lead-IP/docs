@@ -1,0 +1,148 @@
+---
+title: "Personalize Email"
+api: "POST /v1/lexi/personalize-email"
+description: "Generate a personalized email draft for a specific contact, optionally based on a template"
+---
+
+<Warning>
+  This endpoint consumes 2 AI credits per call. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID for retry deduplication.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_id" type="string" required>
+  UUID of the contact the email is for.
+</ParamField>
+
+<ParamField body="intent" type="string" required>
+  High-level purpose of the email, in natural language. Examples: `"schedule an intro call"`, `"follow up on proposal"`, `"check-in after six weeks of silence"`.
+</ParamField>
+
+<ParamField body="template" type="string">
+  Optional template body. Merge tokens (`{{first_name}}`, `{{company}}`) are resolved and the output is personalized around the template's voice.
+</ParamField>
+
+<ParamField body="tone" type="string" default="professional">
+  One of `professional`, `warm`, `formal`, `casual`.
+</ParamField>
+
+<ParamField body="length" type="string" default="medium">
+  `short` (~50 words), `medium` (~120 words), or `long` (~250 words).
+</ParamField>
+
+<ParamField body="language" type="string" default="en">
+  ISO 639-1 language code.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="subject" type="string">Suggested subject line</ResponseField>
+    <ResponseField name="body_text" type="string">Plain-text email body</ResponseField>
+    <ResponseField name="body_html" type="string">HTML-formatted body</ResponseField>
+    <ResponseField name="personalization_notes" type="array">Bullet list of what was tailored (e.g. "Referenced recent Series B announcement")</ResponseField>
+    <ResponseField name="reading_time_seconds" type="integer">Estimated time to read</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/personalize-email \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+    "intent": "follow up on proposal",
+    "tone": "warm"
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/lexi/personalize-email",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "intent": "follow up on proposal",
+        "tone": "warm",
+    },
+)
+print(r.json()["data"]["subject"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/personalize-email',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contact_id: '123e4567-e89b-12d3-a456-426614174000',
+      intent: 'follow up on proposal',
+    }),
+  }
+);
+const { data } = await res.json();
+console.log(data.subject, data.body_text);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "subject": "Quick follow-up on the Series B engagement proposal",
+    "body_text": "Hi Jane,\n\nHope the week has been smooth on your end. Wanted to circle back on the flat-fee engagement proposal we shared last Tuesday and see if anything could use another pass or clarification before you share internally...",
+    "body_html": "<p>Hi Jane,</p><p>Hope the week has been smooth on your end. Wanted to circle back on the flat-fee engagement proposal we shared last Tuesday and see if anything could use another pass or clarification before you share internally...</p>",
+    "personalization_notes": [
+      "Referenced the proposal date from the last email thread",
+      "Used warm tone aligned with prior correspondence"
+    ],
+    "reading_time_seconds": 28,
+    "credits_remaining": 4840
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `contact_id` or `intent` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Contact not found |
+| 429 | `rate_limited` | Rate limit exceeded |

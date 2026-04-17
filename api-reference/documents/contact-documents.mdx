@@ -1,0 +1,124 @@
+---
+title: "List Contact Documents"
+api: "GET /v1/contacts/{id}/documents"
+description: "Return every document linked to the specified contact"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Contact UUID.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="25">
+  Results per page. Maximum 100.
+</ParamField>
+
+<ParamField query="role" type="string">
+  Filter to documents linked with a specific relationship role (e.g. `signed`).
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="documents" type="array">
+      <Expandable title="Document object">
+        <ResponseField name="id" type="string">Document UUID</ResponseField>
+        <ResponseField name="name" type="string">Display name</ResponseField>
+        <ResponseField name="mime_type" type="string">MIME type</ResponseField>
+        <ResponseField name="size_bytes" type="integer">File size</ResponseField>
+        <ResponseField name="folder" type="string">Folder path</ResponseField>
+        <ResponseField name="tags" type="array">Tag strings</ResponseField>
+        <ResponseField name="role" type="string">Link role (e.g. `signed`)</ResponseField>
+        <ResponseField name="linked_at" type="string">ISO 8601 timestamp the link was created</ResponseField>
+        <ResponseField name="created_at" type="string">ISO 8601 document creation timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata: `page`, `per_page`, `total`.
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000/documents" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+contact_id = "123e4567-e89b-12d3-a456-426614174000"
+
+r = requests.get(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/{contact_id}/documents",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+for d in r.json()["data"]["documents"]:
+    print(d["name"], d.get("role"))
+```
+
+```javascript JavaScript
+const id = '123e4567-e89b-12d3-a456-426614174000';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/${id}/documents`,
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.documents.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "documents": [
+      {
+        "id": "doc_01HY1",
+        "name": "Acme-NDA-2026.pdf",
+        "mime_type": "application/pdf",
+        "size_bytes": 183204,
+        "folder": "/clients/acme/ndas",
+        "tags": ["nda"],
+        "role": "signed",
+        "linked_at": "2026-04-17T09:00:00Z",
+        "created_at": "2026-04-17T09:00:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 25, "total": 1 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:documents` permission |
+| 404 | `not_found` | Contact not found |
+| 429 | `rate_limited` | Rate limit exceeded |

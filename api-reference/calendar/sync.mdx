@@ -1,0 +1,118 @@
+---
+title: "Trigger Calendar Sync"
+api: "POST /v1/calendar/sync"
+description: "Force an on-demand synchronization of the connected calendars in the workspace"
+---
+
+## Request
+
+Calendar events are continuously synchronized in the background. Use this endpoint when you need the most recent events immediately (for example, before generating a day-start briefing).
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID to deduplicate retried sync requests within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="mode" type="string" default="incremental">
+  `incremental` (default) syncs only changes since the last successful sync. `full` rebuilds the entire calendar index; use sparingly as it can take several minutes on large accounts.
+</ParamField>
+
+<ParamField body="provider" type="string">
+  Optional provider override: `google` or `microsoft`. When omitted, every connected calendar in the workspace is refreshed.
+</ParamField>
+
+<ParamField body="from_date" type="string">
+  ISO 8601 lower bound when `mode` is `full`. Defaults to 90 days before the current date.
+</ParamField>
+
+<ParamField body="to_date" type="string">
+  ISO 8601 upper bound when `mode` is `full`. Defaults to 180 days after the current date.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="job_id" type="string">Background job identifier</ResponseField>
+    <ResponseField name="status" type="string">`queued`, `running`, `completed`, or `failed`</ResponseField>
+    <ResponseField name="mode" type="string">`incremental` or `full`</ResponseField>
+    <ResponseField name="queued_at" type="string">ISO 8601 timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`. When the job completes, a `calendar.sync.completed` webhook event is delivered if you have a matching subscription.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/calendar/sync \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "incremental"}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/calendar/sync",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"mode": "incremental"},
+)
+print(r.json()["data"]["job_id"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/calendar/sync',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ mode: 'incremental' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.job_id);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "job_id": "cal_sync_01HYVTB5QK8ZA1QH82R7Q9N2PD",
+    "status": "queued",
+    "mode": "incremental",
+    "queued_at": "2026-04-17T10:30:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:calendar` permission, or no connected calendar |
+| 409 | `sync_in_progress` | A full sync is already running |
+| 429 | `rate_limited` | On-demand sync is capped at 6 per hour per workspace |

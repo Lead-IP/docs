@@ -1,0 +1,139 @@
+---
+title: "Update Campaign Step"
+api: "PATCH /v1/campaigns/{id}/steps/{step_id}"
+description: "Modify an existing step's content or timing"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+<ParamField path="step_id" type="string" required>
+  The step's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission. All body fields are optional — include only fields you want to change.
+</Note>
+
+### Body Parameters
+
+<ParamField body="subject" type="string">
+  Email subject line
+</ParamField>
+
+<ParamField body="body" type="string">
+  Email body
+</ParamField>
+
+<ParamField body="delay_days" type="integer">
+  Days to wait after previous step
+</ParamField>
+
+<ParamField body="delay_hours" type="integer">
+  Additional hours (0–23)
+</ParamField>
+
+<ParamField body="send_condition" type="string">
+  `always`, `if_no_reply`, `if_no_open`, `if_opened`, or `if_clicked`
+</ParamField>
+
+<Warning>
+  Updating a step only affects **future** sends. Contacts who have already received this step under the previous configuration are unaffected.
+</Warning>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="step" type="object">
+      Updated step object
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/steps/step_2 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"delay_days": 5}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+STEP_ID = "step_2"
+
+response = requests.patch(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/steps/{STEP_ID}",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"delay_days": 5},
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+const STEP_ID = 'step_2';
+
+await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/steps/${STEP_ID}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ delay_days: 5 }),
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "step": {
+      "id": "step_2",
+      "index": 1,
+      "subject": "Re: {{company_name}}",
+      "body": "Just circling back on my note from last week...",
+      "delay_days": 5,
+      "delay_hours": 0,
+      "send_condition": "if_no_reply"
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `invalid_send_condition` | Unrecognized `send_condition` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 404 | `step_not_found` | No step with this ID in the campaign |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,167 @@
+---
+title: "Campaign Event Stream"
+api: "GET /v1/campaigns/{id}/events"
+description: "Retrieve granular per-event activity (sends, opens, clicks, replies) for a campaign"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Events per page (max: 100)
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filter by event type: `sent`, `delivered`, `opened`, `clicked`, `replied`, `bounced`, `unsubscribed`, `complained`
+</ParamField>
+
+<ParamField query="contact_id" type="string">
+  Filter events for a single contact (UUID)
+</ParamField>
+
+<ParamField query="from_date" type="string">
+  Only events on or after this ISO 8601 timestamp
+</ParamField>
+
+<ParamField query="to_date" type="string">
+  Only events on or before this ISO 8601 timestamp
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:read` permission. Events are retained for 180 days.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="events" type="array">
+      Array of event objects, newest first.
+      <Expandable title="Event object">
+        <ResponseField name="id" type="string">
+          Event UUID
+        </ResponseField>
+        <ResponseField name="type" type="string">
+          Event type (see `type` query filter)
+        </ResponseField>
+        <ResponseField name="contact_id" type="string">
+          Contact UUID
+        </ResponseField>
+        <ResponseField name="email" type="string">
+          Contact's email address at the time of the event
+        </ResponseField>
+        <ResponseField name="step_id" type="string">
+          Step UUID the event relates to
+        </ResponseField>
+        <ResponseField name="timestamp" type="string">
+          ISO 8601 timestamp of the event
+        </ResponseField>
+        <ResponseField name="metadata" type="object">
+          Event-specific metadata (e.g., clicked URL, bounce reason, user agent)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  <Expandable title="Pagination">
+    <ResponseField name="page" type="integer">Current page</ResponseField>
+    <ResponseField name="per_page" type="integer">Page size</ResponseField>
+    <ResponseField name="total" type="integer">Total events matching filter</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/events?type=opened&per_page=100" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.get(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/events",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"type": "opened", "per_page": 100},
+)
+events = response.json()["data"]["events"]
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/events?type=opened&per_page=100`,
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "events": [
+      {
+        "id": "evt_a1b2c3d4",
+        "type": "opened",
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "email": "jane@example.com",
+        "step_id": "step_1",
+        "timestamp": "2026-04-17T14:23:05Z",
+        "metadata": {
+          "user_agent": "Mozilla/5.0 ...",
+          "ip_country": "DE"
+        }
+      },
+      {
+        "id": "evt_b2c3d4e5",
+        "type": "clicked",
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "email": "jane@example.com",
+        "step_id": "step_1",
+        "timestamp": "2026-04-17T14:23:42Z",
+        "metadata": {
+          "url": "https://leadlex.com/demo"
+        }
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 100, "total": 2341 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `invalid_event_type` | Unrecognized `type` value |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:read` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

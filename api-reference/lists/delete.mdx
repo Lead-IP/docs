@@ -1,0 +1,100 @@
+---
+title: "Delete List"
+api: "DELETE /v1/lists/{id}"
+description: "Permanently delete a list and all its memberships"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The list's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `contacts:write` permission.
+</Note>
+
+<Warning>
+  Deletion is **permanent**. The list and all its memberships are removed. **Contacts themselves are not deleted** — only their association with this list. Fires the `list.deleted` webhook event.
+</Warning>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="deleted" type="boolean">
+      Always `true` on success
+    </ResponseField>
+    <ResponseField name="id" type="string">
+      ID of the deleted list
+    </ResponseField>
+    <ResponseField name="memberships_removed" type="integer">
+      Number of contact memberships that were removed
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE https://data.leadlex.com/functions/v1/api-gateway/v1/lists/l1b2c3d4-e5f6-7890-abcd-ef1234567890 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+LIST_ID = "l1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+response = requests.delete(
+    f"{BASE_URL}/v1/lists/{LIST_ID}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+print(response.json()["data"])
+```
+
+```javascript JavaScript
+const LIST_ID = 'l1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/lists/${LIST_ID}`,
+  {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' },
+  }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "deleted": true,
+    "id": "l1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "memberships_removed": 42
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `contacts:write` permission |
+| 404 | `list_not_found` | No list with this ID in your workspace |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,175 @@
+---
+title: "Create Activity"
+api: "POST /v1/activities"
+description: "Log a new activity (call, email, meeting, note, AI action) against a contact or deal"
+---
+
+Use this endpoint to record any user or agent action — a call, a sent email, a meeting, a handwritten note — so it appears on the contact and deal timeline.
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<Note>
+  Requires an API key with the `activities:write` permission. Fires the `activity.created` webhook event.
+</Note>
+
+### Body Parameters
+
+<ParamField body="type" type="string" required>
+  Activity type (e.g., `call`, `email`, `email_sent`, `email_replied`, `meeting`, `note`, `task_completed`, `ai_action`). Free-form — custom types are allowed.
+</ParamField>
+
+<ParamField body="title" type="string">
+  Short human-readable title (max 500 chars)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Full description or body (markdown supported)
+</ParamField>
+
+<ParamField body="contact_id" type="string">
+  UUID of the related contact
+</ParamField>
+
+<ParamField body="deal_id" type="string">
+  UUID of the related deal
+</ParamField>
+
+<ParamField body="entity_type" type="string">
+  Polymorphic entity type (e.g., `campaign`, `task`, `list`) when the activity relates to something other than a contact or deal
+</ParamField>
+
+<ParamField body="entity_id" type="string">
+  UUID of the polymorphic entity
+</ParamField>
+
+<ParamField body="entity_name" type="string">
+  Human-readable name of the entity (for timeline display)
+</ParamField>
+
+<ParamField body="metadata" type="object">
+  Arbitrary structured JSON for type-specific data (call duration, email subject, attendees, etc.). Max 8 KB serialized.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="activity" type="object">
+      <Expandable title="Activity object">
+        <ResponseField name="id" type="string">Newly created activity UUID</ResponseField>
+        <ResponseField name="type" type="string">Activity type</ResponseField>
+        <ResponseField name="title" type="string">Title</ResponseField>
+        <ResponseField name="description" type="string">Description</ResponseField>
+        <ResponseField name="contact_id" type="string">Contact UUID (nullable)</ResponseField>
+        <ResponseField name="deal_id" type="string">Deal UUID (nullable)</ResponseField>
+        <ResponseField name="entity_type" type="string">Polymorphic entity type</ResponseField>
+        <ResponseField name="entity_id" type="string">Polymorphic entity UUID</ResponseField>
+        <ResponseField name="entity_name" type="string">Entity display name</ResponseField>
+        <ResponseField name="metadata" type="object">Structured data</ResponseField>
+        <ResponseField name="created_by_user_id" type="string">UUID of the creating user</ResponseField>
+        <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/activities \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "call",
+    "title": "Discovery call with Jane",
+    "description": "Discussed Q2 outsourcing plans; next step is proposal.",
+    "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+    "deal_id": "3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a",
+    "metadata": {"duration_minutes": 32, "direction": "outbound"}
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+response = requests.post(
+    f"{BASE_URL}/v1/activities",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={
+        "type": "call",
+        "title": "Discovery call with Jane",
+        "description": "Discussed Q2 outsourcing plans; next step is proposal.",
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "deal_id": "3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a",
+        "metadata": {"duration_minutes": 32, "direction": "outbound"},
+    },
+)
+```
+
+```javascript JavaScript
+await fetch('https://data.leadlex.com/functions/v1/api-gateway/v1/activities', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer wbk_your_api_key_here',
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    type: 'call',
+    title: 'Discovery call with Jane',
+    description: 'Discussed Q2 outsourcing plans; next step is proposal.',
+    contact_id: '123e4567-e89b-12d3-a456-426614174000',
+    deal_id: '3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a',
+    metadata: { duration_minutes: 32, direction: 'outbound' },
+  }),
+});
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "activity": {
+      "id": "act_7f3c4d2a-1b8e-4a9c-9d6f-2e5b8c7a1f3d",
+      "type": "call",
+      "title": "Discovery call with Jane",
+      "description": "Discussed Q2 outsourcing plans; next step is proposal.",
+      "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+      "deal_id": "3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a",
+      "entity_type": null,
+      "entity_id": null,
+      "entity_name": null,
+      "metadata": { "duration_minutes": 32, "direction": "outbound" },
+      "created_by_user_id": "9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d",
+      "created_date": "2026-04-17T14:23:05Z"
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `missing_required_field` | `type` is missing |
+| 400 | `metadata_too_large` | Serialized `metadata` exceeds 8 KB |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `activities:write` permission |
+| 404 | `contact_not_found` | Referenced `contact_id` does not exist |
+| 404 | `deal_not_found` | Referenced `deal_id` does not exist |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,175 @@
+---
+title: "List Delivery Logs"
+api: "GET /v1/webhooks/{id}/logs"
+description: "Inspect recent delivery attempts for a webhook, including status codes and response bodies"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The webhook's unique ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Number of logs per page (max: 100)
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by delivery status: `success`, `failed`, or `pending`
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `webhooks:read` permission. Logs are retained for 30 days.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="logs" type="array">
+      Array of delivery log entries, newest first.
+      <Expandable title="Log object">
+        <ResponseField name="delivery_id" type="string">
+          Unique delivery UUID (matches the `X-LeadLex-Delivery-ID` header)
+        </ResponseField>
+        <ResponseField name="event" type="string">
+          Event type that triggered this delivery
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          `success`, `failed`, or `pending`
+        </ResponseField>
+        <ResponseField name="response_status_code" type="integer">
+          HTTP status code returned by your endpoint (null if request timed out)
+        </ResponseField>
+        <ResponseField name="response_body" type="string">
+          First 2 KB of your endpoint's response body
+        </ResponseField>
+        <ResponseField name="duration_ms" type="integer">
+          How long the delivery attempt took, in milliseconds
+        </ResponseField>
+        <ResponseField name="attempt" type="integer">
+          Retry attempt number (1 = initial delivery)
+        </ResponseField>
+        <ResponseField name="error" type="string">
+          Error reason if delivery failed (e.g., `timeout`, `connection_refused`, `dns_failure`, `http_error`)
+        </ResponseField>
+        <ResponseField name="delivered_at" type="string">
+          ISO 8601 timestamp of the delivery attempt
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata
+  <Expandable title="properties">
+    <ResponseField name="page" type="integer">
+      Current page number
+    </ResponseField>
+    <ResponseField name="per_page" type="integer">
+      Logs per page
+    </ResponseField>
+    <ResponseField name="total" type="integer">
+      Total number of logs matching the filter
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/webhooks/7f3c4d2a-1b8e-4a9c-9d6f-2e5b8c7a1f3d/logs?status=failed&per_page=20" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+WEBHOOK_ID = "7f3c4d2a-1b8e-4a9c-9d6f-2e5b8c7a1f3d"
+
+response = requests.get(
+    f"{BASE_URL}/v1/webhooks/{WEBHOOK_ID}/logs",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"status": "failed", "per_page": 20},
+)
+logs = response.json()["data"]["logs"]
+```
+
+```javascript JavaScript
+const WEBHOOK_ID = '7f3c4d2a-1b8e-4a9c-9d6f-2e5b8c7a1f3d';
+
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/webhooks/${WEBHOOK_ID}/logs?status=failed&per_page=20`,
+  {
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' }
+  }
+);
+const { data } = await response.json();
+console.log(data.logs);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "logs": [
+      {
+        "delivery_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        "event": "contact.created",
+        "status": "success",
+        "response_status_code": 200,
+        "response_body": "OK",
+        "duration_ms": 234,
+        "attempt": 1,
+        "error": null,
+        "delivered_at": "2026-04-17T14:23:05Z"
+      },
+      {
+        "delivery_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+        "event": "deal.updated",
+        "status": "failed",
+        "response_status_code": 500,
+        "response_body": "Internal Server Error",
+        "duration_ms": 1820,
+        "attempt": 3,
+        "error": "http_error",
+        "delivered_at": "2026-04-17T14:20:11Z"
+      }
+    ]
+  },
+  "meta": {
+    "page": 1,
+    "per_page": 20,
+    "total": 142
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `webhooks:read` permission |
+| 404 | `webhook_not_found` | No webhook with this ID in your workspace |
+| 429 | `rate_limited` | Rate limit exceeded |

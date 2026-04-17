@@ -1,0 +1,115 @@
+---
+title: "Get Document"
+api: "GET /v1/documents/{id}"
+description: "Retrieve metadata and a short-lived signed download URL for a stored document"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Document UUID returned by `GET /v1/documents`.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="download" type="boolean" default="true">
+  When `true` (default), the response includes a signed URL valid for 15 minutes. Set to `false` for a lightweight metadata-only fetch.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Document UUID</ResponseField>
+    <ResponseField name="name" type="string">Display name</ResponseField>
+    <ResponseField name="description" type="string">Description</ResponseField>
+    <ResponseField name="mime_type" type="string">MIME type</ResponseField>
+    <ResponseField name="size_bytes" type="integer">File size</ResponseField>
+    <ResponseField name="storage_path" type="string">Storage key</ResponseField>
+    <ResponseField name="folder" type="string">Folder path</ResponseField>
+    <ResponseField name="tags" type="array">Tag strings</ResponseField>
+    <ResponseField name="linked_entities" type="array">Entities the document is attached to (`entity_type`, `entity_id`)</ResponseField>
+    <ResponseField name="download_url" type="string">Signed URL for downloading the bytes. Only present when `download=true`.</ResponseField>
+    <ResponseField name="download_url_expires_at" type="string">ISO 8601 timestamp when the URL expires</ResponseField>
+    <ResponseField name="created_by" type="string">Creator user UUID</ResponseField>
+    <ResponseField name="created_at" type="string">ISO 8601 timestamp</ResponseField>
+    <ResponseField name="updated_at" type="string">ISO 8601 timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/documents/doc_01HY1 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+doc_id = "doc_01HY1"
+
+r = requests.get(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/documents/{doc_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+doc = r.json()["data"]
+print(doc["name"], doc.get("download_url"))
+```
+
+```javascript JavaScript
+const id = 'doc_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/documents/${id}`,
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.download_url);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "doc_01HY1",
+    "name": "Acme-NDA-2026.pdf",
+    "description": "Mutual NDA with Acme Corp",
+    "mime_type": "application/pdf",
+    "size_bytes": 183204,
+    "storage_path": "workspaces/ws_123/documents/doc_01HY1.pdf",
+    "folder": "/clients/acme/ndas",
+    "tags": ["nda"],
+    "linked_entities": [
+      { "entity_type": "contact", "entity_id": "123e4567-e89b-12d3-a456-426614174000" }
+    ],
+    "download_url": "https://storage.leadlex.com/signed/...",
+    "download_url_expires_at": "2026-04-17T11:00:00Z",
+    "created_by": "usr_01HW0",
+    "created_at": "2026-04-17T09:00:00Z",
+    "updated_at": "2026-04-17T09:00:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:documents` permission |
+| 404 | `not_found` | Document not found |
+| 429 | `rate_limited` | Rate limit exceeded |

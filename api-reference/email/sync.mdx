@@ -1,0 +1,110 @@
+---
+title: "Trigger Email Sync"
+api: "POST /v1/email/sync"
+description: "Force an on-demand synchronization of the workspace's connected mailbox"
+---
+
+## Request
+
+LeadLex continuously synchronizes connected Gmail and Office 365 mailboxes in the background. This endpoint lets you enqueue an immediate sync when you need fresh data (for example, just before running an outreach report).
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID used to deduplicate retried sync requests within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="mode" type="string" default="incremental">
+  `incremental` (default) fetches only messages newer than the last successful sync. `full` rebuilds the entire mailbox index and may take several minutes.
+</ParamField>
+
+<ParamField body="provider" type="string">
+  Optional provider override: `gmail` or `microsoft`. When omitted, all connected providers are synced.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="job_id" type="string">Unique ID of the background sync job</ResponseField>
+    <ResponseField name="status" type="string">`queued`, `running`, `completed`, or `failed`</ResponseField>
+    <ResponseField name="mode" type="string">`incremental` or `full`</ResponseField>
+    <ResponseField name="queued_at" type="string">ISO 8601 timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Every response returns `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID` headers. Jobs typically complete within 10 seconds for incremental mode; long-running full syncs are reported via the `email.sync.completed` webhook event.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/email/sync \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/email/sync",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={},
+)
+print(r.json()["data"]["job_id"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/email/sync',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: '{}',
+  }
+);
+const { data } = await res.json();
+console.log(data.job_id);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "job_id": "sync_01HYVTB5QK8ZA1QH82R7Q9N2PD",
+    "status": "queued",
+    "mode": "incremental",
+    "queued_at": "2026-04-17T10:30:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:email` permission, or no mailbox connected |
+| 409 | `sync_in_progress` | A full sync is already running; wait for it to finish before starting another |
+| 429 | `rate_limited` | Too many sync requests; on-demand sync is capped at 6 per hour per workspace |

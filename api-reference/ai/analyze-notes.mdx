@@ -1,0 +1,142 @@
+---
+title: "Analyze Notes"
+api: "POST /v1/ai/analyze-notes"
+description: "Summarize and extract insights from all notes attached to a contact or deal"
+---
+
+<Warning>
+  This endpoint consumes AI credits. Each analysis costs 2 credits regardless of note count. If the workspace balance is insufficient, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Deduplicates retries within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_id" type="string">
+  UUID of a contact whose notes should be analyzed. Provide either `contact_id` or `deal_id`.
+</ParamField>
+
+<ParamField body="deal_id" type="string">
+  UUID of a deal whose notes should be analyzed.
+</ParamField>
+
+<ParamField body="focus" type="string">
+  Optional focus area: `summary`, `risks`, `opportunities`, `sentiment`, `timeline`, or `all`. Defaults to `all`.
+</ParamField>
+
+<ParamField body="max_notes" type="integer" default="50">
+  Maximum number of notes to include (most recent first). Maximum 200.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="summary" type="string">High-level narrative summary of all considered notes</ResponseField>
+    <ResponseField name="key_points" type="array">Bulleted list of extracted key points</ResponseField>
+    <ResponseField name="risks" type="array">Identified risks, each with `description` and `severity`</ResponseField>
+    <ResponseField name="opportunities" type="array">Extracted opportunities</ResponseField>
+    <ResponseField name="sentiment" type="object">`label` (positive/neutral/negative) and `score` (-1.0 to 1.0)</ResponseField>
+    <ResponseField name="timeline" type="array">Chronological events pulled from notes</ResponseField>
+    <ResponseField name="note_ids" type="array">IDs of notes included in the analysis</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after this call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/ai/analyze-notes \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"contact_id": "123e4567-e89b-12d3-a456-426614174000", "focus": "all"}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/ai/analyze-notes",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"contact_id": "123e4567-e89b-12d3-a456-426614174000"},
+)
+print(r.json()["data"]["summary"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/ai/analyze-notes',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ contact_id: '123e4567-e89b-12d3-a456-426614174000' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.summary);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "summary": "Jane is actively exploring outside counsel for a Series B round. She has requested standard engagement terms and timelines.",
+    "key_points": [
+      "Looking for counsel to support Series B fundraise",
+      "Prefers flat-fee engagement over hourly",
+      "Expects kick-off in early Q3"
+    ],
+    "risks": [
+      { "description": "Competing proposals from two other firms", "severity": "medium" }
+    ],
+    "opportunities": [
+      { "description": "Potential ongoing general counsel retainer" }
+    ],
+    "sentiment": { "label": "positive", "score": 0.62 },
+    "timeline": [
+      { "date": "2026-04-10", "event": "Initial intro email" },
+      { "date": "2026-04-15", "event": "Discovery call" }
+    ],
+    "note_ids": ["note_001", "note_002", "note_003"],
+    "credits_remaining": 4866
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Missing `contact_id` or `deal_id` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Target entity does not exist |
+| 409 | `no_notes` | No notes are attached to the target entity |
+| 429 | `rate_limited` | Rate limit exceeded |

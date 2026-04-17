@@ -1,0 +1,167 @@
+---
+title: "Get Deal"
+api: "GET /v1/deals/{id}"
+description: "Retrieve a single deal by ID with all fields"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The deal's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `deals:read` permission.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="deal" type="object">
+      <Expandable title="Deal object">
+        <ResponseField name="id" type="string">
+          Unique deal ID (UUID)
+        </ResponseField>
+        <ResponseField name="name" type="string">
+          Deal name / title
+        </ResponseField>
+        <ResponseField name="stage" type="string">
+          Current pipeline stage (e.g., `qualification`, `proposal`, `closed_won`)
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          `open`, `won`, or `lost`
+        </ResponseField>
+        <ResponseField name="pipeline" type="string">
+          Pipeline slug the deal belongs to
+        </ResponseField>
+        <ResponseField name="estimated_value" type="number">
+          Estimated deal value in the deal's currency
+        </ResponseField>
+        <ResponseField name="currency" type="string">
+          ISO 4217 currency code (e.g., `EUR`, `USD`)
+        </ResponseField>
+        <ResponseField name="main_contact_id" type="string">
+          UUID of the primary contact for this deal
+        </ResponseField>
+        <ResponseField name="owner_user_id" type="string">
+          UUID of the user who owns this deal
+        </ResponseField>
+        <ResponseField name="priority" type="string">
+          `low`, `medium`, `high`, or `urgent`
+        </ResponseField>
+        <ResponseField name="matter_type" type="string">
+          Type of legal matter (e.g., `litigation`, `m&a`, `employment`)
+        </ResponseField>
+        <ResponseField name="tags" type="array">
+          Array of tag strings
+        </ResponseField>
+        <ResponseField name="related_company_id" type="string">
+          UUID of the linked company, if any
+        </ResponseField>
+        <ResponseField name="high_level_description" type="string">
+          Free-form description of the deal
+        </ResponseField>
+        <ResponseField name="next_follow_up_date" type="string">
+          ISO 8601 date of next scheduled follow-up
+        </ResponseField>
+        <ResponseField name="fee_model" type="string">
+          Fee structure (e.g., `hourly`, `fixed`, `contingency`, `retainer`)
+        </ResponseField>
+        <ResponseField name="probability" type="integer">
+          Win probability as an integer 0–100
+        </ResponseField>
+        <ResponseField name="closed_date" type="string">
+          ISO 8601 date the deal was closed (null if still open)
+        </ResponseField>
+        <ResponseField name="created_date" type="string">
+          ISO 8601 timestamp when the deal was created
+        </ResponseField>
+        <ResponseField name="updated_date" type="string">
+          ISO 8601 timestamp of last update
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/deals/3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+DEAL_ID = "3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a"
+
+response = requests.get(
+    f"{BASE_URL}/v1/deals/{DEAL_ID}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+deal = response.json()["data"]["deal"]
+```
+
+```javascript JavaScript
+const DEAL_ID = '3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a';
+
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/deals/${DEAL_ID}`,
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "deal": {
+      "id": "3f8e1d2c-4b5a-6d7e-8f9a-0b1c2d3e4f5a",
+      "name": "Acme Corp — M&A Advisory",
+      "stage": "proposal",
+      "status": "open",
+      "pipeline": "default",
+      "estimated_value": 250000,
+      "currency": "EUR",
+      "main_contact_id": "123e4567-e89b-12d3-a456-426614174000",
+      "owner_user_id": "9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d",
+      "priority": "high",
+      "matter_type": "m&a",
+      "tags": ["cross-border", "strategic"],
+      "related_company_id": "c1b2a3d4-e5f6-7890-abcd-ef1234567890",
+      "high_level_description": "Advisory on proposed acquisition of subsidiary",
+      "next_follow_up_date": "2026-04-22",
+      "fee_model": "fixed",
+      "probability": 60,
+      "closed_date": null,
+      "created_date": "2026-03-12T09:00:00Z",
+      "updated_date": "2026-04-15T16:40:00Z"
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `deals:read` permission |
+| 404 | `deal_not_found` | No deal with this ID in your workspace |
+| 429 | `rate_limited` | Rate limit exceeded |

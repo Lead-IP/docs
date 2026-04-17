@@ -1,0 +1,108 @@
+---
+title: "Export Companies"
+api: "GET /v1/companies/export"
+description: "Download companies as CSV for segmentation analyses and data lake ingestion"
+---
+
+## Request
+
+Returns a CSV file of companies (client companies only, not workspace rows) matching the query. Response is streamed with `Content-Type: text/csv; charset=utf-8`.
+
+### Query Parameters
+
+<ParamField query="limit" type="integer" default="10000">
+  Maximum rows per request. Maximum 50,000.
+</ParamField>
+
+<ParamField query="industry" type="string">
+  Filter by industry string.
+</ParamField>
+
+<ParamField query="size" type="string">
+  Filter by size bucket (e.g. `11-50`, `51-200`).
+</ParamField>
+
+<ParamField query="country" type="string">
+  ISO 3166-1 alpha-2 country code of the HQ location.
+</ParamField>
+
+<ParamField query="tag" type="string">
+  Filter by tag. Repeat to require multiple.
+</ParamField>
+
+<ParamField query="fields" type="string">
+  Comma-separated field whitelist. Defaults to `id,name,domain,industry,size,founded_year,hq_location,linkedin_url,tags,created_at`.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Accept: text/csv
+```
+
+## Response
+
+CSV stream with `Content-Disposition: attachment; filename="companies-export.csv"`. First row is headers. Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/companies/export?industry=Legal%20Services&limit=3000" \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Accept: text/csv" \
+  -o companies-legal.csv
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+with requests.get(
+    f"{BASE_URL}/v1/companies/export",
+    headers={"Authorization": f"Bearer {API_KEY}", "Accept": "text/csv"},
+    params={"industry": "Legal Services", "limit": 3000},
+    stream=True,
+) as r:
+    r.raise_for_status()
+    with open("companies-legal.csv", "wb") as f:
+        for chunk in r.iter_content(chunk_size=65536):
+            f.write(chunk)
+```
+
+```javascript JavaScript
+import fs from 'node:fs';
+
+const url = new URL('https://data.leadlex.com/functions/v1/api-gateway/v1/companies/export');
+url.searchParams.set('industry', 'Legal Services');
+url.searchParams.set('limit', '3000');
+const res = await fetch(url, {
+  headers: {
+    'Authorization': 'Bearer wbk_your_api_key_here',
+    'Accept': 'text/csv',
+  },
+});
+if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+await fs.promises.writeFile('companies-legal.csv', Buffer.from(await res.arrayBuffer()));
+```
+
+</CodeGroup>
+
+### Example Response
+
+```csv
+id,name,domain,industry,size,founded_year,hq_location,linkedin_url,tags,created_at
+co_01HY1,Acme Corp,acme.com,Legal Services,201-500,1998,"New York, NY, US",https://linkedin.com/company/acme,"priority",2026-02-11T09:00:00Z
+co_02HY2,Beta LLP,beta.com,Legal Services,11-50,2014,"Berlin, DE",,"prospect",2026-03-02T10:15:00Z
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | `limit` exceeds 50,000 or invalid filter value |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:companies` permission |
+| 429 | `rate_limited` | Export rate limit exceeded (10 per hour per workspace) |

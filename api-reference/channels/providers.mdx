@@ -1,0 +1,114 @@
+---
+title: "List Channel Providers"
+api: "GET /v1/channels/providers"
+description: "Return the status of every messaging channel provider connected to the workspace"
+---
+
+## Request
+
+Use this endpoint to detect which channels are ready to send/receive messages, and to surface connection errors to users before they attempt to send.
+
+### Query Parameters
+
+_None._
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="providers" type="array">
+      <Expandable title="Provider object">
+        <ResponseField name="channel" type="string">`slack`, `teams`, `whatsapp`, `telegram`, or `email`</ResponseField>
+        <ResponseField name="connected" type="boolean">`true` when an authorised provider exists</ResponseField>
+        <ResponseField name="display_name" type="string">Friendly name (for example the Slack workspace name)</ResponseField>
+        <ResponseField name="account_id" type="string">Provider-side account identifier</ResponseField>
+        <ResponseField name="connected_at" type="string">ISO 8601 timestamp of the initial connection</ResponseField>
+        <ResponseField name="last_sync_at" type="string">ISO 8601 timestamp of the last successful sync</ResponseField>
+        <ResponseField name="status" type="string">`healthy`, `degraded`, `needs_reauth`, or `disconnected`</ResponseField>
+        <ResponseField name="error_message" type="string">Human-readable error when `status` is not `healthy`</ResponseField>
+        <ResponseField name="capabilities" type="array">List of supported operations (e.g. `send`, `receive`, `attachments`)</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/channels/providers \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.get(
+    f"{BASE_URL}/v1/channels/providers",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+for p in r.json()["data"]["providers"]:
+    print(p["channel"], p["status"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/channels/providers',
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+data.providers.forEach((p) => console.log(p.channel, p.status));
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "providers": [
+      {
+        "channel": "slack",
+        "connected": true,
+        "display_name": "LeadLex Eng",
+        "account_id": "T01234567",
+        "connected_at": "2026-02-11T09:00:00Z",
+        "last_sync_at": "2026-04-17T10:30:00Z",
+        "status": "healthy",
+        "error_message": null,
+        "capabilities": ["send", "receive", "attachments"]
+      },
+      {
+        "channel": "teams",
+        "connected": false,
+        "display_name": null,
+        "account_id": null,
+        "connected_at": null,
+        "last_sync_at": null,
+        "status": "disconnected",
+        "error_message": null,
+        "capabilities": []
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:channels` permission |
+| 429 | `rate_limited` | Rate limit exceeded |

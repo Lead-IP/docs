@@ -1,0 +1,108 @@
+---
+title: "Export Contacts"
+api: "GET /v1/contacts/export"
+description: "Download contacts as CSV for analytics and backup purposes"
+---
+
+## Request
+
+Returns a CSV file of contacts matching the query. Use for analytics exports, backups, or migrating data out of LeadLex. The response is streamed with `Content-Type: text/csv; charset=utf-8`.
+
+### Query Parameters
+
+<ParamField query="limit" type="integer" default="10000">
+  Maximum rows to return. Maximum 50,000 per request. For larger exports, paginate by `created_after` / `created_before`.
+</ParamField>
+
+<ParamField query="created_after" type="string">
+  ISO 8601 lower bound on `created_at`.
+</ParamField>
+
+<ParamField query="created_before" type="string">
+  ISO 8601 upper bound on `created_at`.
+</ParamField>
+
+<ParamField query="list_id" type="string">
+  Filter by list membership.
+</ParamField>
+
+<ParamField query="tag" type="string">
+  Filter to contacts carrying the given tag. Repeat to require multiple tags.
+</ParamField>
+
+<ParamField query="fields" type="string">
+  Comma-separated list of fields to include. Defaults to the standard export set (`id`, `full_name`, `email`, `phone`, `job_title`, `company_name`, `linkedin_url`, `tags`, `created_at`).
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Accept: text/csv
+```
+
+## Response
+
+The body is a CSV document. Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `X-Request-ID`, and `Content-Disposition: attachment; filename="contacts-export.csv"`. The first row is always the header.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/export?limit=5000" \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Accept: text/csv" \
+  -o contacts.csv
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+with requests.get(
+    f"{BASE_URL}/v1/contacts/export",
+    headers={"Authorization": f"Bearer {API_KEY}", "Accept": "text/csv"},
+    params={"limit": 5000},
+    stream=True,
+) as r:
+    r.raise_for_status()
+    with open("contacts.csv", "wb") as f:
+        for chunk in r.iter_content(chunk_size=65536):
+            f.write(chunk)
+```
+
+```javascript JavaScript
+import fs from 'node:fs';
+
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/export?limit=5000',
+  {
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Accept': 'text/csv',
+    },
+  }
+);
+if (!res.ok || !res.body) throw new Error(`Export failed: ${res.status}`);
+await fs.promises.writeFile('contacts.csv', Buffer.from(await res.arrayBuffer()));
+```
+
+</CodeGroup>
+
+### Example Response
+
+```csv
+id,full_name,email,phone,job_title,company_name,linkedin_url,tags,created_at
+123e4567-e89b-12d3-a456-426614174000,Jane Doe,jane@acme.com,+1-555-0100,General Counsel,Acme Corp,https://linkedin.com/in/janedoe,"lead,priority",2026-04-15T09:00:00Z
+456e7890-a1b2-34c5-d678-901234567890,Bob Smith,bob@beta.com,+1-555-0200,CEO,Beta LLP,,"prospect",2026-04-16T14:30:00Z
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | `limit` exceeds 50,000 or invalid filter value |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:contacts` permission |
+| 429 | `rate_limited` | Export is rate-limited to 10 calls per hour per workspace |

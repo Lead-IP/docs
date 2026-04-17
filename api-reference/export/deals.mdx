@@ -1,0 +1,112 @@
+---
+title: "Export Deals"
+api: "GET /v1/deals/export"
+description: "Download deals as CSV for pipeline reporting and backups"
+---
+
+## Request
+
+Returns a CSV file of deals matching the query. Response is streamed with `Content-Type: text/csv; charset=utf-8`.
+
+### Query Parameters
+
+<ParamField query="limit" type="integer" default="10000">
+  Maximum rows to return. Maximum 50,000 per request.
+</ParamField>
+
+<ParamField query="pipeline_id" type="string">
+  Scope the export to a single pipeline.
+</ParamField>
+
+<ParamField query="stage_id" type="string">
+  Scope the export to a single pipeline stage.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by status: `open`, `won`, or `lost`.
+</ParamField>
+
+<ParamField query="created_after" type="string">
+  ISO 8601 lower bound on `created_at`.
+</ParamField>
+
+<ParamField query="created_before" type="string">
+  ISO 8601 upper bound on `created_at`.
+</ParamField>
+
+<ParamField query="fields" type="string">
+  Comma-separated field whitelist. Defaults to `id,name,pipeline_id,stage_id,status,value,currency,company_name,owner_email,created_at,closed_at`.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Accept: text/csv
+```
+
+## Response
+
+CSV stream with `Content-Disposition: attachment; filename="deals-export.csv"`. First row is headers. Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/deals/export?status=open&limit=2000" \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Accept: text/csv" \
+  -o deals-open.csv
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+with requests.get(
+    f"{BASE_URL}/v1/deals/export",
+    headers={"Authorization": f"Bearer {API_KEY}", "Accept": "text/csv"},
+    params={"status": "open", "limit": 2000},
+    stream=True,
+) as r:
+    r.raise_for_status()
+    with open("deals-open.csv", "wb") as f:
+        for chunk in r.iter_content(chunk_size=65536):
+            f.write(chunk)
+```
+
+```javascript JavaScript
+import fs from 'node:fs';
+
+const url = new URL('https://data.leadlex.com/functions/v1/api-gateway/v1/deals/export');
+url.searchParams.set('status', 'open');
+url.searchParams.set('limit', '2000');
+const res = await fetch(url, {
+  headers: {
+    'Authorization': 'Bearer wbk_your_api_key_here',
+    'Accept': 'text/csv',
+  },
+});
+if (!res.ok) throw new Error(`Export failed: ${res.status}`);
+await fs.promises.writeFile('deals-open.csv', Buffer.from(await res.arrayBuffer()));
+```
+
+</CodeGroup>
+
+### Example Response
+
+```csv
+id,name,pipeline_id,stage_id,status,value,currency,company_name,owner_email,created_at,closed_at
+deal_01HY1,Acme Series B counsel,pipe_default,stage_proposal,open,45000,EUR,Acme Corp,team@emasex.de,2026-04-10T09:00:00Z,
+deal_02HY2,Beta compliance audit,pipe_default,stage_qualified,open,22000,EUR,Beta LLP,team@emasex.de,2026-04-12T11:30:00Z,
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | `limit` exceeds 50,000 or invalid filter value |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:deals` permission |
+| 429 | `rate_limited` | Export rate limit exceeded (10 per hour per workspace) |

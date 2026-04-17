@@ -1,0 +1,105 @@
+---
+title: "Pause Campaign"
+api: "POST /v1/campaigns/{id}/pause"
+description: "Pause an active campaign; in-flight sends complete but no new sends are scheduled"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission. The campaign must currently be in `active` status. Fires the `campaign.paused` webhook event.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="campaign" type="object">
+      <Expandable title="Campaign object">
+        <ResponseField name="id" type="string">
+          Campaign ID
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Always `paused` on success
+        </ResponseField>
+        <ResponseField name="paused_at" type="string">
+          ISO 8601 timestamp of the pause
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/pause \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.post(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/pause",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+
+await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/pause`,
+  {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer wbk_your_api_key_here' },
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "campaign": {
+      "id": "cmp_abc123",
+      "status": "paused",
+      "paused_at": "2026-04-17T14:30:00Z"
+    }
+  }
+}
+```
+
+<Tip>
+  To resume a paused campaign, call `POST /v1/campaigns/{id}/start`.
+</Tip>
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 409 | `campaign_not_active` | Campaign is not in `active` status |
+| 429 | `rate_limited` | Rate limit exceeded |

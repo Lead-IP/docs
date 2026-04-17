@@ -1,0 +1,122 @@
+---
+title: "Get Email Thread"
+api: "GET /v1/email/threads/{id}"
+description: "Retrieve a single email thread with its full message list"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Thread identifier, as returned by `GET /v1/email/threads`.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="include_body" type="boolean" default="true">
+  When `true`, the full HTML and text body of each message is returned. Set to `false` for a lightweight summary response.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Thread identifier</ResponseField>
+    <ResponseField name="subject" type="string">Thread subject</ResponseField>
+    <ResponseField name="participants" type="array">Email addresses involved in the thread</ResponseField>
+    <ResponseField name="contact_ids" type="array">Linked contact UUIDs</ResponseField>
+    <ResponseField name="deal_id" type="string">Linked deal UUID, if any</ResponseField>
+    <ResponseField name="messages" type="array">
+      Ordered array of messages, oldest first
+      <Expandable title="Message object">
+        <ResponseField name="id" type="string">Message identifier</ResponseField>
+        <ResponseField name="from" type="string">Sender address</ResponseField>
+        <ResponseField name="to" type="array">Recipient addresses</ResponseField>
+        <ResponseField name="cc" type="array">CC addresses</ResponseField>
+        <ResponseField name="sent_at" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="direction" type="string">`inbound` or `outbound`</ResponseField>
+        <ResponseField name="body_text" type="string">Plain-text body, when `include_body=true`</ResponseField>
+        <ResponseField name="body_html" type="string">HTML body, when `include_body=true`</ResponseField>
+        <ResponseField name="attachments" type="array">Metadata for each attachment (filename, mime_type, size_bytes)</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+Every response returns `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID` headers.
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/email/threads/18c9a4b2e7ff21aa \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+thread_id = "18c9a4b2e7ff21aa"
+
+r = requests.get(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/email/threads/{thread_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+thread = r.json()["data"]
+print(thread["subject"], len(thread["messages"]))
+```
+
+```javascript JavaScript
+const threadId = '18c9a4b2e7ff21aa';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/email/threads/${threadId}`,
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.messages.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "18c9a4b2e7ff21aa",
+    "subject": "Proposal for Series B counsel",
+    "participants": ["jane@example.com", "team@emasex.de"],
+    "contact_ids": ["123e4567-e89b-12d3-a456-426614174000"],
+    "deal_id": null,
+    "messages": [
+      {
+        "id": "m1",
+        "from": "jane@example.com",
+        "to": ["team@emasex.de"],
+        "cc": [],
+        "sent_at": "2026-04-15T09:01:00Z",
+        "direction": "inbound",
+        "body_text": "Can you send over your standard engagement letter?",
+        "body_html": "<p>Can you send over your standard engagement letter?</p>",
+        "attachments": []
+      }
+    ]
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:email` permission |
+| 404 | `not_found` | No thread with the given ID exists in this workspace |
+| 429 | `rate_limited` | Rate limit exceeded |

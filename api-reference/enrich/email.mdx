@@ -1,0 +1,140 @@
+---
+title: "Enrich by Email"
+api: "POST /v1/enrich/email"
+description: "Lookup person and company details using only an email address, without touching existing contacts"
+---
+
+<Warning>
+  This endpoint consumes 1 enrichment credit per successful call. Requests that find no data return `409 no_match` and do not consume credits. If the workspace balance is zero, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+Use this endpoint to fetch enrichment data when you do not yet have a contact record - for example, scoring inbound leads before creating them or pre-populating a signup form. Unlike `/v1/enrich/contact`, this endpoint never writes to your database.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Deduplicates retries within 24 hours; the credit is charged only on the first call.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="email" type="string" required>
+  Email address to look up. Must be a syntactically valid RFC 5321 address.
+</ParamField>
+
+<ParamField body="include" type="array">
+  Optional subset of sections to return: `person`, `company`, `social`. Defaults to all sections.
+</ParamField>
+
+<ParamField body="verify" type="boolean" default="false">
+  When `true`, additionally performs SMTP verification and returns `deliverable` status.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="person" type="object">`full_name`, `first_name`, `last_name`, `job_title`, `seniority`, `location`, `linkedin_url`</ResponseField>
+    <ResponseField name="company" type="object">`name`, `domain`, `industry`, `size`, `founded_year`, `description`, `hq_location`, `linkedin_url`</ResponseField>
+    <ResponseField name="social" type="object">Known social handles</ResponseField>
+    <ResponseField name="deliverable" type="string">`deliverable`, `undeliverable`, `risky`, or `unknown` - only present when `verify=true`</ResponseField>
+    <ResponseField name="source" type="string">Data source identifier</ResponseField>
+    <ResponseField name="confidence" type="number">0.0 - 1.0</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Workspace balance after the call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/email \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "jane@acme.com", "verify": true}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/enrich/email",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"email": "jane@acme.com", "verify": True},
+)
+data = r.json()["data"]
+print(data["person"]["full_name"], data.get("deliverable"))
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/email',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email: 'jane@acme.com', verify: true }),
+  }
+);
+const { data } = await res.json();
+console.log(data.person?.full_name, data.deliverable);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "person": {
+      "full_name": "Jane Doe",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "job_title": "General Counsel",
+      "seniority": "executive",
+      "location": "New York, NY, US",
+      "linkedin_url": "https://linkedin.com/in/janedoe"
+    },
+    "company": {
+      "name": "Acme Corp",
+      "domain": "acme.com",
+      "industry": "Legal Services",
+      "size": "201-500",
+      "hq_location": "New York, NY, US"
+    },
+    "deliverable": "deliverable",
+    "source": "vendor_a",
+    "confidence": 0.93,
+    "credits_remaining": 4869
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Malformed or missing email |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:enrich` permission |
+| 409 | `no_match` | Upstream providers returned no data |
+| 429 | `rate_limited` | Rate limit exceeded |

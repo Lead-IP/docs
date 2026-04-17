@@ -1,0 +1,141 @@
+---
+title: "Merge Contacts"
+api: "POST /v1/contacts/merge"
+description: "Merge one or more duplicate contacts into a primary record"
+---
+
+## Request
+
+Merges fold the duplicates into the primary contact. The primary keeps its UUID; duplicate UUIDs are retired. Non-empty fields on the primary are preserved; missing fields are filled from the duplicates in order. Notes, activities, tasks, emails, documents, and list memberships are re-homed to the primary.
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Strongly recommended. Same key returns the same result within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="primary_id" type="string" required>
+  UUID of the contact that will remain after the merge.
+</ParamField>
+
+<ParamField body="duplicate_ids" type="array" required>
+  UUIDs of contacts to merge into the primary. Maximum 20 per request.
+</ParamField>
+
+<ParamField body="overwrite" type="boolean" default="false">
+  When `true`, non-empty fields on the primary can be overwritten by duplicate values. Defaults to fill-only behavior.
+</ParamField>
+
+<ParamField body="dry_run" type="boolean" default="false">
+  When `true`, the API returns a preview of the merge without making changes.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="primary" type="object">The resulting contact object after the merge</ResponseField>
+    <ResponseField name="merged_ids" type="array">UUIDs of the duplicates that were retired</ResponseField>
+    <ResponseField name="fields_populated" type="array">Field names that were filled from duplicates</ResponseField>
+    <ResponseField name="counts" type="object">`{ notes, activities, tasks, emails, documents, list_memberships }` moved to the primary</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`. Each merged duplicate emits a `contact.merged` webhook event.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/merge \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "primary_id": "123e4567-e89b-12d3-a456-426614174000",
+    "duplicate_ids": ["456e7890-a1b2-34c5-d678-901234567890"]
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/contacts/merge",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={
+        "primary_id": "123e4567-e89b-12d3-a456-426614174000",
+        "duplicate_ids": ["456e7890-a1b2-34c5-d678-901234567890"],
+    },
+)
+print(r.json()["data"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/merge',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      primary_id: '123e4567-e89b-12d3-a456-426614174000',
+      duplicate_ids: ['456e7890-a1b2-34c5-d678-901234567890'],
+    }),
+  }
+);
+const { data } = await res.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "primary": {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "full_name": "Jane Doe",
+      "email": "jane@acme.com",
+      "phone": "+1-555-0100"
+    },
+    "merged_ids": ["456e7890-a1b2-34c5-d678-901234567890"],
+    "fields_populated": ["phone", "linkedin_url"],
+    "counts": {
+      "notes": 3,
+      "activities": 11,
+      "tasks": 2,
+      "emails": 18,
+      "documents": 1,
+      "list_memberships": 4
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | More than 20 duplicates, or `primary_id` appears in `duplicate_ids` |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:contacts` permission |
+| 404 | `not_found` | Primary or any duplicate ID was not found |
+| 409 | `merge_conflict` | Duplicates reference each other in a circular chain |
+| 429 | `rate_limited` | Rate limit exceeded |

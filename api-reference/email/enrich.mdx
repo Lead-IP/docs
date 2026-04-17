@@ -1,0 +1,137 @@
+---
+title: "Enrich Email or Domain"
+api: "POST /v1/email/enrich"
+description: "Look up a person or organization from an email address or domain"
+---
+
+<Warning>
+  This endpoint consumes enrichment credits from your workspace balance. Each successful lookup costs 1 credit. If the workspace is out of credits, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID to deduplicate retries within 24 hours. The credit is only charged on the first successful call.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="email" type="string">
+  Email address to resolve. Either `email` or `domain` is required.
+</ParamField>
+
+<ParamField body="domain" type="string">
+  Domain name to resolve (e.g. `acme.com`). Either `email` or `domain` is required.
+</ParamField>
+
+<ParamField body="include" type="array">
+  Optional subset of sections to return: `person`, `company`, `social`. Defaults to all.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="person" type="object">Personal details when `email` is provided: `full_name`, `first_name`, `last_name`, `job_title`, `seniority`, `location`, `linkedin_url`.</ResponseField>
+    <ResponseField name="company" type="object">Organizational details: `name`, `domain`, `industry`, `size`, `founded_year`, `description`, `linkedin_url`, `hq_location`.</ResponseField>
+    <ResponseField name="social" type="object">Social handles, where available.</ResponseField>
+    <ResponseField name="source" type="string">Origin of the data (`vendor_a`, `vendor_b`, `cached`).</ResponseField>
+    <ResponseField name="confidence" type="number">Confidence score from 0.0 to 1.0.</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Workspace credit balance after this call.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/email/enrich \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "jane@acme.com"}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/email/enrich",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"email": "jane@acme.com"},
+)
+person = r.json()["data"]["person"]
+print(person["full_name"], person["job_title"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/email/enrich',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email: 'jane@acme.com' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.person?.full_name);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "person": {
+      "full_name": "Jane Doe",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "job_title": "General Counsel",
+      "seniority": "executive",
+      "location": "New York, NY, US",
+      "linkedin_url": "https://linkedin.com/in/janedoe"
+    },
+    "company": {
+      "name": "Acme Corp",
+      "domain": "acme.com",
+      "industry": "Legal Services",
+      "size": "201-500",
+      "founded_year": 1998,
+      "hq_location": "New York, NY, US"
+    },
+    "source": "vendor_a",
+    "confidence": 0.92,
+    "credits_remaining": 4872
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Neither `email` nor `domain` was provided |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:enrich` permission |
+| 404 | `no_match` | Upstream providers returned no data for the input |
+| 429 | `rate_limited` | Rate limit exceeded |

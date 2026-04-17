@@ -1,0 +1,124 @@
+---
+title: "Campaign Stats"
+api: "GET /v1/campaigns/{id}/stats"
+description: "Aggregate delivery, engagement, and response metrics for a campaign"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:read` permission. Stats are aggregated across all steps and enrolled contacts.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="stats" type="object">
+      <Expandable title="Stats object">
+        <ResponseField name="sent_count" type="integer">
+          Total emails successfully dispatched
+        </ResponseField>
+        <ResponseField name="opened_count" type="integer">
+          Total unique opens (deduplicated per recipient per step)
+        </ResponseField>
+        <ResponseField name="clicked_count" type="integer">
+          Total unique link clicks
+        </ResponseField>
+        <ResponseField name="replied_count" type="integer">
+          Recipients who replied at least once
+        </ResponseField>
+        <ResponseField name="bounced_count" type="integer">
+          Hard + soft bounces
+        </ResponseField>
+        <ResponseField name="unsubscribed_count" type="integer">
+          Recipients who unsubscribed
+        </ResponseField>
+        <ResponseField name="open_rate" type="number">
+          `opened_count / sent_count` as a float 0–1
+        </ResponseField>
+        <ResponseField name="click_rate" type="number">
+          `clicked_count / sent_count` as a float 0–1
+        </ResponseField>
+        <ResponseField name="reply_rate" type="number">
+          `replied_count / sent_count` as a float 0–1
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/stats \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.get(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/stats",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+stats = response.json()["data"]["stats"]
+print(f"Open rate: {stats['open_rate']:.1%}")
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/stats`,
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+const { data } = await response.json();
+console.log(`Open rate: ${(data.stats.open_rate * 100).toFixed(1)}%`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "stats": {
+      "sent_count": 1247,
+      "opened_count": 612,
+      "clicked_count": 143,
+      "replied_count": 89,
+      "bounced_count": 12,
+      "unsubscribed_count": 4,
+      "open_rate": 0.491,
+      "click_rate": 0.115,
+      "reply_rate": 0.071
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:read` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

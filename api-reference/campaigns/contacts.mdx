@@ -1,0 +1,139 @@
+---
+title: "List Campaign Contacts"
+api: "GET /v1/campaigns/{id}/contacts"
+description: "Retrieve the contacts currently enrolled in a campaign, with per-contact status"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="50">
+  Number of contacts per page (max: 100)
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter by enrollment status: `pending`, `active`, `paused`, `completed`, `bounced`, `unsubscribed`, or `replied`
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<Note>
+  Requires an API key with the `campaigns:read` permission.
+</Note>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="contacts" type="array">
+      Enrolled contacts, newest first.
+      <Expandable title="Contact enrollment object">
+        <ResponseField name="contact_id" type="string">
+          Contact UUID
+        </ResponseField>
+        <ResponseField name="full_name" type="string">
+          Contact's full name
+        </ResponseField>
+        <ResponseField name="email" type="string">
+          Contact email
+        </ResponseField>
+        <ResponseField name="status" type="string">
+          Enrollment status (see query filter)
+        </ResponseField>
+        <ResponseField name="current_step" type="integer">
+          Zero-based index of the next step to send
+        </ResponseField>
+        <ResponseField name="added_at" type="string">
+          ISO 8601 timestamp when contact was added
+        </ResponseField>
+        <ResponseField name="last_sent_at" type="string">
+          ISO 8601 timestamp of last email sent (nullable)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  <Expandable title="Pagination">
+    <ResponseField name="page" type="integer">Current page</ResponseField>
+    <ResponseField name="per_page" type="integer">Page size</ResponseField>
+    <ResponseField name="total" type="integer">Total enrolled contacts</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123/contacts?status=active" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.get(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}/contacts",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"status": "active"},
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}/contacts?status=active`,
+  { headers: { 'Authorization': 'Bearer wbk_your_api_key_here' } }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "contacts": [
+      {
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "full_name": "Jane Doe",
+        "email": "jane@example.com",
+        "status": "active",
+        "current_step": 2,
+        "added_at": "2026-04-01T09:00:00Z",
+        "last_sent_at": "2026-04-15T09:00:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 147 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:read` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

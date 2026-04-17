@@ -1,0 +1,146 @@
+---
+title: "Update Campaign"
+api: "PATCH /v1/campaigns/{id}"
+description: "Modify campaign settings such as send limits, tracking, and timezone"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  The campaign's unique ID (UUID)
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<Note>
+  Requires an API key with the `campaigns:write` permission. All body fields are optional — include only fields you want to change.
+</Note>
+
+### Body Parameters
+
+<ParamField body="name" type="string">
+  Campaign name
+</ParamField>
+
+<ParamField body="description" type="string">
+  Free-form description
+</ParamField>
+
+<ParamField body="daily_send_limit" type="integer">
+  Maximum emails to send per day (1–500)
+</ParamField>
+
+<ParamField body="delay_between_emails" type="integer">
+  Seconds to wait between sends within a day (min 30)
+</ParamField>
+
+<ParamField body="sending_timezone" type="string">
+  IANA timezone (e.g., `Europe/Berlin`, `America/New_York`)
+</ParamField>
+
+<ParamField body="send_on_weekends" type="boolean">
+  Whether sends are allowed on Saturday and Sunday
+</ParamField>
+
+<ParamField body="track_opens" type="boolean">
+  Enable open tracking
+</ParamField>
+
+<ParamField body="track_clicks" type="boolean">
+  Enable click tracking
+</ParamField>
+
+<ParamField body="show_unsubscribe" type="boolean">
+  Append unsubscribe footer (recommended; required in some jurisdictions)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="campaign" type="object">
+      Updated campaign object (same shape as `GET /v1/campaigns/{id}`)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/cmp_abc123 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "daily_send_limit": 75,
+    "send_on_weekends": false
+  }'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+CAMPAIGN_ID = "cmp_abc123"
+
+response = requests.patch(
+    f"{BASE_URL}/v1/campaigns/{CAMPAIGN_ID}",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"daily_send_limit": 75, "send_on_weekends": False},
+)
+```
+
+```javascript JavaScript
+const CAMPAIGN_ID = 'cmp_abc123';
+
+const response = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/campaigns/${CAMPAIGN_ID}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ daily_send_limit: 75, send_on_weekends: false }),
+  }
+);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "campaign": {
+      "id": "cmp_abc123",
+      "name": "Q2 GC Outreach",
+      "daily_send_limit": 75,
+      "send_on_weekends": false,
+      "updated_at": "2026-04-17T14:30:00Z"
+    }
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `invalid_timezone` | `sending_timezone` is not a valid IANA zone |
+| 400 | `invalid_send_limit` | `daily_send_limit` out of range (1–500) |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `campaigns:write` permission |
+| 404 | `campaign_not_found` | No campaign with this ID |
+| 429 | `rate_limited` | Rate limit exceeded |

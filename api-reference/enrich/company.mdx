@@ -1,0 +1,134 @@
+---
+title: "Enrich Company"
+api: "POST /v1/enrich/company"
+description: "Populate firmographic data for a company record from domain, name, or existing company ID"
+---
+
+<Warning>
+  This endpoint consumes enrichment credits. Each successful enrichment costs 1 credit. Requests that fail to match any provider do not consume a credit and return `409 no_match`. If the workspace's balance is exhausted, the API returns `402 insufficient_credits`.
+</Warning>
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID for deduplicating retries within 24 hours.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="company_id" type="string">
+  UUID of an existing company record. Supply either `company_id` or `domain`.
+</ParamField>
+
+<ParamField body="domain" type="string">
+  Canonical company domain (e.g. `acme.com`). Used when you do not yet have a company record. The API will create or return the matching company.
+</ParamField>
+
+<ParamField body="fields" type="array">
+  Optional whitelist of firmographic fields: `name`, `industry`, `size`, `founded_year`, `description`, `hq_location`, `logo_url`, `linkedin_url`, `tech_stack`.
+</ParamField>
+
+<ParamField body="overwrite" type="boolean" default="false">
+  When `true`, enrichment overwrites non-empty fields. Defaults to false (fill-only mode).
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="company" type="object">The updated company object</ResponseField>
+    <ResponseField name="fields_updated" type="array">Field names that changed</ResponseField>
+    <ResponseField name="source" type="string">Provider the data came from</ResponseField>
+    <ResponseField name="confidence" type="number">0.0 - 1.0</ResponseField>
+    <ResponseField name="credits_remaining" type="integer">Balance after the call</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/company \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "acme.com"}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+r = requests.post(
+    f"{BASE_URL}/v1/enrich/company",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"domain": "acme.com"},
+)
+print(r.json()["data"]["company"]["name"])
+```
+
+```javascript JavaScript
+const res = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/company',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ domain: 'acme.com' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.company.name);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "company": {
+      "id": "c0mpany-uuid-0001",
+      "name": "Acme Corp",
+      "domain": "acme.com",
+      "industry": "Legal Services",
+      "size": "201-500",
+      "founded_year": 1998,
+      "hq_location": "New York, NY, US",
+      "linkedin_url": "https://linkedin.com/company/acme"
+    },
+    "fields_updated": ["industry", "size", "founded_year", "hq_location"],
+    "source": "vendor_a",
+    "confidence": 0.87,
+    "credits_remaining": 4870
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | Neither `company_id` nor `domain` provided |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
+| 403 | `insufficient_permissions` | Missing `write:enrich` permission |
+| 404 | `not_found` | Supplied `company_id` does not exist in this workspace |
+| 409 | `no_match` | Upstream providers returned no data for the input |
+| 429 | `rate_limited` | Rate limit exceeded |

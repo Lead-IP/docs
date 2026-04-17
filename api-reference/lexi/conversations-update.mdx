@@ -1,0 +1,125 @@
+---
+title: "Update Lexi Conversation"
+api: "PATCH /v1/lexi/conversations/{id}"
+description: "Rename, archive, or re-assign a Lexi conversation"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Conversation UUID.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID for retry deduplication.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="title" type="string">
+  New title. 1 - 200 characters.
+</ParamField>
+
+<ParamField body="archived" type="boolean">
+  `true` to archive, `false` to restore.
+</ParamField>
+
+<ParamField body="context" type="object">
+  Updated entity context: `contact_id`, `deal_id`, `matter_id`, or `null` to clear a field.
+</ParamField>
+
+At least one field must be provided.
+
+## Response
+
+<ResponseField name="data" type="object">
+  The updated conversation object (same shape as `GET /v1/lexi/conversations/{id}` without messages).
+  <Expandable title="properties">
+    <ResponseField name="id" type="string">Conversation UUID</ResponseField>
+    <ResponseField name="title" type="string">Title</ResponseField>
+    <ResponseField name="archived" type="boolean">Archive state</ResponseField>
+    <ResponseField name="context" type="object">Entity context</ResponseField>
+    <ResponseField name="updated_at" type="string">ISO 8601 timestamp</ResponseField>
+  </Expandable>
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl -X PATCH \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/conv_01HY1 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Acme Series B briefing"}'
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+conv_id = "conv_01HY1"
+
+r = requests.patch(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/{conv_id}",
+    headers={
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    },
+    json={"title": "Acme Series B briefing"},
+)
+print(r.json()["data"]["title"])
+```
+
+```javascript JavaScript
+const id = 'conv_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/lexi/conversations/${id}`,
+  {
+    method: 'PATCH',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title: 'Acme Series B briefing' }),
+  }
+);
+const { data } = await res.json();
+console.log(data.title);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "id": "conv_01HY1",
+    "title": "Acme Series B briefing",
+    "archived": false,
+    "context": { "contact_id": "123e4567-e89b-12d3-a456-426614174000" },
+    "updated_at": "2026-04-17T10:45:00Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | No updatable fields provided or title too long |
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:ai` permission |
+| 404 | `not_found` | Conversation not found |
+| 429 | `rate_limited` | Rate limit exceeded |

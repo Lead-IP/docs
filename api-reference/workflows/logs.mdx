@@ -1,0 +1,131 @@
+---
+title: "List Workflow Logs"
+api: "GET /v1/workflows/{id}/logs"
+description: "Return the trigger history for a workflow, including success / failure status"
+---
+
+## Request
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Workflow UUID.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="25">
+  Results per page. Maximum 100.
+</ParamField>
+
+<ParamField query="status" type="string">
+  Filter to a specific run status: `success`, `failed`, or `skipped`.
+</ParamField>
+
+<ParamField query="after" type="string">
+  ISO 8601 lower bound on `triggered_at`.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="logs" type="array">
+      <Expandable title="Log entry">
+        <ResponseField name="id" type="string">Log entry UUID</ResponseField>
+        <ResponseField name="workflow_id" type="string">Workflow UUID</ResponseField>
+        <ResponseField name="triggered_at" type="string">ISO 8601 timestamp</ResponseField>
+        <ResponseField name="entity_type" type="string">Entity that triggered the workflow</ResponseField>
+        <ResponseField name="entity_id" type="string">UUID of the triggering entity</ResponseField>
+        <ResponseField name="status" type="string">`success`, `failed`, or `skipped`</ResponseField>
+        <ResponseField name="skip_reason" type="string">For `skipped`, why (e.g. `daily_cap_reached`, `condition_not_met`)</ResponseField>
+        <ResponseField name="action_result" type="object">Action-specific output (e.g. email message ID, channel message ID)</ResponseField>
+        <ResponseField name="error" type="object">`{ code, message }` for failed runs</ResponseField>
+        <ResponseField name="duration_ms" type="integer">Execution time in milliseconds</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata.
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/wf_01HY1/logs?status=failed" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+wf_id = "wf_01HY1"
+
+r = requests.get(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/{wf_id}/logs",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params={"status": "failed"},
+)
+for log in r.json()["data"]["logs"]:
+    print(log["triggered_at"], log["status"], log.get("error"))
+```
+
+```javascript JavaScript
+const id = 'wf_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/workflows/${id}/logs?status=failed`,
+  { headers: { Authorization: 'Bearer wbk_your_api_key_here' } },
+);
+const { data } = await res.json();
+console.log(data.logs.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "logs": [
+      {
+        "id": "wfl_01HY1",
+        "workflow_id": "wf_01HY1",
+        "triggered_at": "2026-04-17T09:31:00Z",
+        "entity_type": "deal",
+        "entity_id": "deal_01HY1",
+        "status": "success",
+        "skip_reason": null,
+        "action_result": { "slack_message_ts": "1713351031.001200" },
+        "error": null,
+        "duration_ms": 412
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 25, "total": 42 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:workflows` permission |
+| 404 | `not_found` | Workflow not found |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,134 @@
+---
+title: "List Email Threads"
+api: "GET /v1/email/threads"
+description: "Paginate over synchronized email threads in the workspace"
+---
+
+## Request
+
+### Query Parameters
+
+<ParamField query="page" type="integer" default="1">
+  Page number for pagination.
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="25">
+  Results per page. Maximum 100.
+</ParamField>
+
+<ParamField query="contact_id" type="string">
+  Return only threads that include the given contact.
+</ParamField>
+
+<ParamField query="deal_id" type="string">
+  Return only threads linked to the given deal.
+</ParamField>
+
+<ParamField query="unread" type="boolean">
+  Filter to threads with at least one unread message.
+</ParamField>
+
+<ParamField query="after" type="string">
+  ISO 8601 lower-bound filter on the thread's most recent message.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="threads" type="array">
+      Array of thread summaries
+      <Expandable title="Thread object">
+        <ResponseField name="id" type="string">Thread identifier</ResponseField>
+        <ResponseField name="subject" type="string">Latest subject line</ResponseField>
+        <ResponseField name="snippet" type="string">Short preview of the most recent message</ResponseField>
+        <ResponseField name="message_count" type="integer">Number of messages in the thread</ResponseField>
+        <ResponseField name="unread_count" type="integer">Number of unread messages</ResponseField>
+        <ResponseField name="participants" type="array">Array of participant email addresses</ResponseField>
+        <ResponseField name="contact_ids" type="array">Linked contact UUIDs</ResponseField>
+        <ResponseField name="deal_id" type="string">Linked deal UUID, if any</ResponseField>
+        <ResponseField name="last_message_at" type="string">ISO 8601 timestamp</ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Pagination metadata: `page`, `per_page`, and `total`.
+</ResponseField>
+
+Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/email/threads?per_page=50&unread=true" \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+params = {"per_page": 50, "unread": "true"}
+r = requests.get(
+    f"{BASE_URL}/v1/email/threads",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+    params=params,
+)
+for thread in r.json()["data"]["threads"]:
+    print(thread["subject"], thread["last_message_at"])
+```
+
+```javascript JavaScript
+const url = new URL('https://data.leadlex.com/functions/v1/api-gateway/v1/email/threads');
+url.searchParams.set('per_page', '50');
+url.searchParams.set('unread', 'true');
+
+const res = await fetch(url, {
+  headers: { Authorization: 'Bearer wbk_your_api_key_here' },
+});
+const { data } = await res.json();
+console.log(data.threads.length);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "threads": [
+      {
+        "id": "18c9a4b2e7ff21aa",
+        "subject": "Proposal for Series B counsel",
+        "snippet": "Thanks for the introduction, we'd love to schedule a call...",
+        "message_count": 4,
+        "unread_count": 1,
+        "participants": ["jane@example.com", "team@emasex.de"],
+        "contact_ids": ["123e4567-e89b-12d3-a456-426614174000"],
+        "deal_id": null,
+        "last_message_at": "2026-04-17T09:14:00Z"
+      }
+    ]
+  },
+  "meta": { "page": 1, "per_page": 50, "total": 137 }
+}
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `read:email` permission, or no connected provider |
+| 429 | `rate_limited` | Rate limit exceeded |

@@ -1,0 +1,88 @@
+---
+title: "Delete Document"
+api: "DELETE /v1/documents/{id}"
+description: "Delete a document record and its underlying object storage file"
+---
+
+## Request
+
+Deletion is permanent. The document metadata row is removed, every entity link is detached, and the object-storage bytes are scheduled for deletion within 1 hour. Audit log entries are retained per the workspace's retention policy.
+
+### Path Parameters
+
+<ParamField path="id" type="string" required>
+  Document UUID.
+</ParamField>
+
+### Query Parameters
+
+<ParamField query="hard" type="boolean" default="false">
+  When `true`, the object storage file is deleted immediately rather than scheduled. Requires the `admin:documents` permission.
+</ParamField>
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key_here
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional UUID. Repeated DELETEs with the same key return the same result without erroring.
+</ParamField>
+
+## Response
+
+On success returns HTTP `204 No Content`. Standard rate-limit headers and `X-Request-ID` are present.
+
+<CodeGroup>
+
+```bash cURL
+curl -X DELETE \
+  https://data.leadlex.com/functions/v1/api-gateway/v1/documents/doc_01HY1 \
+  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -i
+```
+
+```python Python
+import requests
+
+API_KEY = "wbk_your_api_key_here"
+doc_id = "doc_01HY1"
+
+r = requests.delete(
+    f"https://data.leadlex.com/functions/v1/api-gateway/v1/documents/{doc_id}",
+    headers={"Authorization": f"Bearer {API_KEY}"},
+)
+assert r.status_code == 204, r.text
+```
+
+```javascript JavaScript
+const id = 'doc_01HY1';
+const res = await fetch(
+  `https://data.leadlex.com/functions/v1/api-gateway/v1/documents/${id}`,
+  {
+    method: 'DELETE',
+    headers: { Authorization: 'Bearer wbk_your_api_key_here' },
+  }
+);
+if (res.status !== 204) throw new Error(`Failed: ${res.status}`);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```
+HTTP/1.1 204 No Content
+X-Request-ID: req_01HY1K0E7V8Q0YXH7DSTX5B3CA
+```
+
+## Errors
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 401 | `invalid_key` | Invalid or expired API key |
+| 403 | `insufficient_permissions` | Missing `write:documents` (or `admin:documents` when `hard=true`) |
+| 404 | `not_found` | Document not found |
+| 409 | `in_use` | Document is referenced by a workflow or template and cannot be deleted |
+| 429 | `rate_limited` | Rate limit exceeded |
