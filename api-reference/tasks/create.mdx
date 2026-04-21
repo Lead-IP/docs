@@ -1,23 +1,30 @@
 ---
 title: "Create Task"
 api: "POST /v1/tasks"
-description: "Create a new task"
+description: "Create a new task linked to a contact, deal, or event"
 ---
 
 ## Request
+
+<Warning>
+  **At least one parent link is required.** A task must reference `contact_id`, `deal_id`, or `event_id`. Orphan tasks are rejected with `400`.
+</Warning>
 
 ### Body Parameters
 
 <ParamField body="title" type="string" required>Task title</ParamField>
 <ParamField body="description" type="string">Task description</ParamField>
 <ParamField body="status" type="string" default="open">Status (`open`, `in_progress`, `completed`)</ParamField>
-<ParamField body="priority" type="string">Priority level</ParamField>
+<ParamField body="priority" type="string">Priority level (`low`, `medium`, `high`)</ParamField>
 <ParamField body="task_type" type="string">Task type</ParamField>
-<ParamField body="due_date" type="string">Due date (ISO 8601)</ParamField>
+<ParamField body="due_date" type="string">Due date (ISO 8601 or `YYYY-MM-DD`)</ParamField>
 <ParamField body="assignee_id" type="string">Assignee user ID</ParamField>
-<ParamField body="contact_id" type="string">Related contact ID</ParamField>
-<ParamField body="deal_id" type="string">Related deal ID</ParamField>
-<ParamField body="event_id" type="string">Related event ID</ParamField>
+<ParamField body="contact_id" type="string">UUID of linked contact. Must belong to your workspace.</ParamField>
+<ParamField body="deal_id" type="string">UUID of linked deal.</ParamField>
+<ParamField body="event_id" type="string">UUID of linked event.</ParamField>
+<ParamField body="created_date" type="string">
+  Optional ISO 8601 timestamp. Honored verbatim if within the last 5 years and not more than 24 h in the future; otherwise the server `now()` is used. Never null.
+</ParamField>
 
 ### Headers
 
@@ -29,7 +36,7 @@ Content-Type: application/json
 ## Response
 
 <ResponseField name="data" type="object">
-  Created task with `id`, `title`, `status`, `priority`, `due_date`, `assigned_to_user_id`, `created_date`
+  Created task with `id`, `title`, `status`, `priority`, `due_date`, `assigned_to_user_id`, `contact_id`, `deal_id`, `event_id`, `created_date`.
 </ResponseField>
 
 <CodeGroup>
@@ -38,7 +45,12 @@ Content-Type: application/json
 curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/tasks \
   -H "Authorization: Bearer wbk_your_api_key_here" \
   -H "Content-Type: application/json" \
-  -d '{ "title": "Follow up with client", "due_date": "2026-03-10", "assignee_id": "user-001" }'
+  -d '{
+    "title": "Follow up with Hans Müller",
+    "due_date": "2026-03-10",
+    "priority": "high",
+    "contact_id": "789e0123-e45b-67c8-a901-234567890abc"
+  }'
 ```
 
 ```python Python
@@ -49,9 +61,10 @@ BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 response = requests.post(f"{BASE_URL}/v1/tasks", headers=headers, json={
-    "title": "Follow up with client",
+    "title": "Follow up with Hans Müller",
     "due_date": "2026-03-10",
-    "assignee_id": "user-001"
+    "priority": "high",
+    "contact_id": "789e0123-e45b-67c8-a901-234567890abc",
 })
 print(response.json())
 ```
@@ -62,7 +75,12 @@ const response = await fetch(
   {
     method: 'POST',
     headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: 'Follow up with client', due_date: '2026-03-10' })
+    body: JSON.stringify({
+      title: 'Follow up with Hans Müller',
+      due_date: '2026-03-10',
+      priority: 'high',
+      contact_id: '789e0123-e45b-67c8-a901-234567890abc'
+    })
   }
 );
 const { data } = await response.json();
@@ -74,5 +92,16 @@ const { data } = await response.json();
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Missing `title` |
+| 400 | `validation_error` | Missing `title` — or no parent link (`contact_id` / `deal_id` / `event_id`) |
 | 403 | `insufficient_permissions` | Missing `activities:write` permission |
+
+### Orphan-task rejection example
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "At least one parent link (contact_id, company_id, deal_id, or event_id) is required"
+  }
+}
+```

@@ -1,20 +1,36 @@
 ---
 title: "Create Note"
 api: "POST /v1/notes"
-description: "Create a workspace-level note"
+description: "Create a note linked to a contact, company, or deal"
 ---
 
 ## Request
 
+<Warning>
+  **At least one parent link is required.** A note must reference `contact_id`, `related_company_id` (a.k.a. `company_id` on the body), or `deal_id`. Orphan notes are rejected with `400`.
+</Warning>
+
 ### Body Parameters
 
 <ParamField body="title" type="string" required>Note title</ParamField>
+
 <ParamField body="content" type="string">Note content (max 50,000 characters)</ParamField>
-<ParamField body="note_type" type="string" default="general">Note type</ParamField>
+
+<ParamField body="note_type" type="string" default="general">Note type: `general`, `meeting`, `call`, `email`, `other`</ParamField>
+
 <ParamField body="tags" type="array">Array of tag strings</ParamField>
+
 <ParamField body="is_pinned" type="boolean" default="false">Pin the note</ParamField>
-<ParamField body="contact_id" type="string">Link to a contact</ParamField>
-<ParamField body="deal_id" type="string">Link to a deal</ParamField>
+
+<ParamField body="contact_id" type="string">UUID of the linked contact. Must belong to your workspace.</ParamField>
+
+<ParamField body="related_company_id" type="string">UUID of the linked company. (Also accepts `company_id` as an alias.)</ParamField>
+
+<ParamField body="deal_id" type="string">UUID of the linked deal.</ParamField>
+
+<ParamField body="created_date" type="string">
+  Optional ISO 8601 timestamp. Honored verbatim if within the last 5 years and not more than 24 h in the future; otherwise the server `now()` is used. Never null.
+</ParamField>
 
 ### Headers
 
@@ -26,7 +42,7 @@ Content-Type: application/json
 ## Response
 
 <ResponseField name="data" type="object">
-  Created note with `id`, `title`, `note_type`, `tags`, `is_pinned`, `created_date`
+  Created note with `id`, `title`, `note_type`, `tags`, `is_pinned`, `contact_id`, `related_company_id`, `deal_id`, `created_date`.
 </ResponseField>
 
 <CodeGroup>
@@ -35,7 +51,13 @@ Content-Type: application/json
 curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/notes \
   -H "Authorization: Bearer wbk_your_api_key_here" \
   -H "Content-Type: application/json" \
-  -d '{ "title": "Weekly summary", "content": "Key updates from this week...", "tags": ["weekly"] }'
+  -d '{
+    "title": "Call summary — Hans Müller",
+    "content": "Discussed Q2 IP audit timeline.",
+    "note_type": "call",
+    "contact_id": "789e0123-e45b-67c8-a901-234567890abc",
+    "created_date": "2026-04-10T12:00:00Z"
+  }'
 ```
 
 ```python Python
@@ -46,7 +68,10 @@ BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 response = requests.post(f"{BASE_URL}/v1/notes", headers=headers, json={
-    "title": "Weekly summary", "content": "Key updates...", "tags": ["weekly"]
+    "title": "Call summary",
+    "content": "Discussed Q2 IP audit timeline.",
+    "note_type": "call",
+    "contact_id": "789e0123-e45b-67c8-a901-234567890abc",
 })
 print(response.json())
 ```
@@ -57,7 +82,11 @@ const response = await fetch(
   {
     method: 'POST',
     headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: 'Weekly summary', content: 'Key updates...' })
+    body: JSON.stringify({
+      title: 'Call summary',
+      content: 'Discussed Q2 IP audit timeline.',
+      contact_id: '789e0123-e45b-67c8-a901-234567890abc'
+    })
   }
 );
 const { data } = await response.json();
@@ -69,5 +98,25 @@ const { data } = await response.json();
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Missing `title` |
+| 400 | `validation_error` | Missing `title` — or no parent link (`contact_id` / `company_id` / `deal_id`) |
 | 403 | `insufficient_permissions` | Missing `contacts:write` permission |
+
+### Orphan-note rejection example
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "At least one parent link (contact_id, company_id, deal_id, or event_id) is required"
+  }
+}
+```
+
+### Sub-resource alternative
+
+If you already have a contact or company in hand, you can skip the parent-link body field and POST to the sub-resource endpoint:
+
+- `POST /v1/contacts/{contact_id}/notes`
+- `POST /v1/companies/{company_id}/notes`
+
+Both accept the same body (minus the parent-link field) and enforce workspace scope on the path parameter.

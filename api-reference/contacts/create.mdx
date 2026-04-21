@@ -15,12 +15,24 @@ Content-Type: application/json
 
 ### Body Parameters
 
-<ParamField body="full_name" type="string" required>
-  Contact's full name
+<Info>
+  **Name handling**: Send any of `full_name`, `first_name` + `last_name`, or just an `email`. The API splits / composes / derives the missing pieces. It also understands the `"Last, First"` format.
+</Info>
+
+<ParamField body="full_name" type="string">
+  Contact's full name. If only this is given, the API splits on the last whitespace (e.g. `"Hans Müller"` → first=`Hans`, last=`Müller`). Accepts the `"Last, First"` format (e.g. `"Müller, Hans"`).
+</ParamField>
+
+<ParamField body="first_name" type="string">
+  Contact's first name. Composed into `full_name` if `full_name` isn't provided.
+</ParamField>
+
+<ParamField body="last_name" type="string">
+  Contact's last name.
 </ParamField>
 
 <ParamField body="email" type="string">
-  Email address (recommended)
+  Email address. Used for duplicate detection and, as a last resort, to derive a name (e.g. `hans.mueller@x.de` → first=`Hans`, last=`Mueller`) when no name is given.
 </ParamField>
 
 <ParamField body="phone" type="string">
@@ -31,54 +43,46 @@ Content-Type: application/json
   Job title or position
 </ParamField>
 
-<ParamField body="company_name" type="string">
+<ParamField body="company" type="string">
   Company or organization name
+</ParamField>
+
+<ParamField body="related_company_id" type="string">
+  UUID of an existing Company to link this contact to. Also accepts the legacy `company_id` key.
 </ParamField>
 
 <ParamField body="linkedin_url" type="string">
   LinkedIn profile URL
 </ParamField>
 
-<ParamField body="notes" type="string">
-  Additional notes about the contact
+<ParamField body="priority" type="string | number">
+  Either `"high"` / `"medium"` / `"low"` or an integer (1/2/3).
 </ParamField>
 
 <ParamField body="tags" type="array">
   Array of tag strings for categorization
 </ParamField>
 
+<ParamField body="custom_fields" type="object">
+  Arbitrary JSON object preserved alongside the contact — ideal for domain-specific columns from imported CSVs (e.g. matter numbers, jurisdiction codes).
+</ParamField>
+
+<ParamField body="created_date" type="string">
+  Optional ISO 8601 timestamp. Honored verbatim if it's within the last 5 years and no more than 24 h in the future; otherwise the server `now()` is used. Never null.
+</ParamField>
+
 ## Response
 
 <ResponseField name="data" type="object">
-  The created contact object
+  The created contact object.
   <Expandable title="Contact object">
-    <ResponseField name="id" type="string">
-      Unique contact ID (UUID)
-    </ResponseField>
-    <ResponseField name="full_name" type="string">
-      Contact's full name
-    </ResponseField>
-    <ResponseField name="email" type="string">
-      Email address
-    </ResponseField>
-    <ResponseField name="phone" type="string">
-      Phone number
-    </ResponseField>
-    <ResponseField name="job_title" type="string">
-      Job title
-    </ResponseField>
-    <ResponseField name="company_name" type="string">
-      Company name
-    </ResponseField>
-    <ResponseField name="linkedin_url" type="string">
-      LinkedIn URL
-    </ResponseField>
-    <ResponseField name="created_at" type="string">
-      ISO 8601 timestamp
-    </ResponseField>
-    <ResponseField name="updated_date" type="string">
-      ISO 8601 timestamp
-    </ResponseField>
+    <ResponseField name="id" type="string">Unique contact ID (UUID)</ResponseField>
+    <ResponseField name="first_name" type="string">Derived or provided first name</ResponseField>
+    <ResponseField name="last_name" type="string">Derived or provided last name</ResponseField>
+    <ResponseField name="full_name" type="string">Derived or provided full name</ResponseField>
+    <ResponseField name="email" type="string">Email address</ResponseField>
+    <ResponseField name="priority" type="number">Priority (1=high, 2=medium, 3=low)</ResponseField>
+    <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -90,12 +94,10 @@ curl -X POST \
   -H "Authorization: Bearer wbk_your_api_key_here" \
   -H "Content-Type: application/json" \
   -d '{
-    "full_name": "John Smith",
-    "email": "john@example.com",
-    "phone": "+1-555-0123",
-    "job_title": "CEO",
-    "company_name": "Tech Corp",
-    "linkedin_url": "https://linkedin.com/in/johnsmith"
+    "full_name": "Müller, Hans",
+    "email": "hans@roche.com",
+    "job_title": "IP Partner",
+    "company": "Roche AG"
   }'
 ```
 
@@ -110,16 +112,17 @@ headers = {
     "Content-Type": "application/json"
 }
 
-data = {
-    "full_name": "John Smith",
-    "email": "john@example.com",
-    "job_title": "CEO",
-    "company_name": "Tech Corp"
-}
+# Any of these shapes works — the API fills in the rest
+data = { "full_name": "Müller, Hans", "email": "hans@roche.com" }
+# or
+# data = { "first_name": "Hans", "last_name": "Müller", "email": "hans@roche.com" }
+# or
+# data = { "email": "hans.mueller@roche.com" }   # name derived from local part
 
 response = requests.post(f"{BASE_URL}/v1/contacts", headers=headers, json=data)
 contact = response.json()["data"]
-print(f"Created contact: {contact['id']}")
+print(contact["first_name"], contact["last_name"], contact["full_name"])
+# → Hans Müller Hans Müller
 ```
 
 ```javascript JavaScript
@@ -132,16 +135,15 @@ const response = await fetch(
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      full_name: 'John Smith',
-      email: 'john@example.com',
-      job_title: 'CEO',
-      company_name: 'Tech Corp'
+      full_name: 'Müller, Hans',
+      email: 'hans@roche.com',
+      job_title: 'IP Partner'
     })
   }
 );
 
 const { data } = await response.json();
-console.log(`Created contact: ${data.id}`);
+console.log(`Created contact: ${data.first_name} ${data.last_name}`);
 ```
 
 </CodeGroup>
@@ -152,15 +154,12 @@ console.log(`Created contact: ${data.id}`);
 {
   "data": {
     "id": "789e0123-e45b-67c8-a901-234567890abc",
-    "full_name": "John Smith",
-    "email": "john@example.com",
-    "phone": "+1-555-0123",
-    "job_title": "CEO",
-    "company_name": "Tech Corp",
-    "linkedin_url": "https://linkedin.com/in/johnsmith",
-    "notes": null,
-    "created_at": "2026-02-24T14:30:00Z",
-    "updated_date": "2026-02-24T14:30:00Z"
+    "first_name": "Hans",
+    "last_name": "Müller",
+    "full_name": "Hans Müller",
+    "email": "hans@roche.com",
+    "priority": null,
+    "created_date": "2026-04-21T14:30:00.000Z"
   }
 }
 ```
@@ -168,24 +167,33 @@ console.log(`Created contact: ${data.id}`);
 ## Validation
 
 <Warning>
-  If both `email` and `phone` are omitted, the API will return a validation error. At least one contact method is required.
+  At least one of `first_name`, `last_name`, `full_name`, or `email` must be provided. If none are present the API returns `validation_error`.
 </Warning>
+
+### Name derivation rules
+
+Applied in order; the first rule that yields a name wins:
+
+1. **`"Last, First"` format** — if `full_name` contains a comma and first/last are empty, it's split into last / first.
+2. **Split `full_name`** — when `full_name` is given but `first_name` / `last_name` are empty, it's split on the last whitespace. "Jean-Claude van Damme" → first=`Jean-Claude van`, last=`Damme`.
+3. **Compose `full_name`** — when `first_name` / `last_name` are given but `full_name` is empty.
+4. **Derive from email** — local part is split on `._-+` into Title Case tokens.
 
 ### Duplicate Detection
 
-The API checks for duplicate contacts based on:
+The API checks for duplicates by:
 - Exact email match (case-insensitive)
-- Exact phone number match
+- Full-name ILIKE match
 
-If a duplicate is found, the existing contact will be returned instead of creating a new one.
+If a duplicate is found the Lexi agent prompts for confirmation. The REST endpoint still creates the contact (pass `force_create: false` on the agent tool to suppress).
 
 ## Errors
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Missing required fields or invalid format |
+| 400 | `validation_error` | No name or email provided |
 | 401 | `invalid_key` | Invalid API key |
-| 403 | `insufficient_permissions` | Missing `write` permission |
+| 403 | `insufficient_permissions` | Missing `contacts:write` permission |
 | 429 | `rate_limited` | Rate limit exceeded |
 
 ### Example Validation Error
@@ -194,13 +202,7 @@ If a duplicate is found, the existing contact will be returned instead of creati
 {
   "error": {
     "code": "validation_error",
-    "message": "Invalid request parameters",
-    "details": {
-      "fields": {
-        "full_name": "Required field",
-        "email": "Invalid email format"
-      }
-    }
+    "message": "A name (first_name, last_name, or full_name) or email is required"
   }
 }
 ```

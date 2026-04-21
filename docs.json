@@ -2,15 +2,33 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "LeadLex",
-  "colors": { "primary": "#001ce0", "light": "#e3f307", "dark": "#001ce0" },
+  "colors": {
+    "primary": "#001ce0",
+    "light": "#e3f307",
+    "dark": "#001ce0"
+  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
         "tab": "Guides",
         "groups": [
-          { "group": "Getting Started", "pages": ["index", "quickstart"] },
-          { "group": "Core Concepts", "pages": ["authentication", "webhooks", "examples"] }
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "authentication",
+              "webhooks",
+              "examples",
+              "data-integrity"
+            ]
+          }
         ]
       },
       {
@@ -19,77 +37,146 @@
           {
             "group": "Contacts",
             "pages": [
-              "api-reference/contacts/list", "api-reference/contacts/create", "api-reference/contacts/get",
-              "api-reference/contacts/update", "api-reference/contacts/delete", "api-reference/contacts/bulk-create",
-              "api-reference/contacts/activities", "api-reference/contacts/add-tags",
-              "api-reference/contacts/create-note", "api-reference/contacts/list-notes"
+              "api-reference/contacts/list",
+              "api-reference/contacts/create",
+              "api-reference/contacts/get",
+              "api-reference/contacts/update",
+              "api-reference/contacts/delete",
+              "api-reference/contacts/bulk-create",
+              "api-reference/contacts/activities",
+              "api-reference/contacts/add-tags",
+              "api-reference/contacts/create-note",
+              "api-reference/contacts/list-notes"
             ]
           },
           {
             "group": "Companies",
             "pages": [
-              "api-reference/companies/list", "api-reference/companies/create", "api-reference/companies/get",
-              "api-reference/companies/update", "api-reference/companies/delete", "api-reference/companies/contacts",
-              "api-reference/companies/deals", "api-reference/companies/link-contacts",
-              "api-reference/companies/create-note", "api-reference/companies/list-notes"
+              "api-reference/companies/list",
+              "api-reference/companies/create",
+              "api-reference/companies/get",
+              "api-reference/companies/update",
+              "api-reference/companies/delete",
+              "api-reference/companies/contacts",
+              "api-reference/companies/deals",
+              "api-reference/companies/link-contacts",
+              "api-reference/companies/create-note",
+              "api-reference/companies/list-notes"
             ]
           },
           {
             "group": "Deals",
             "pages": [
-              "api-reference/deals/list", "api-reference/deals/create", "api-reference/deals/get",
-              "api-reference/deals/update", "api-reference/deals/delete", "api-reference/deals/bulk-create",
-              "api-reference/deals/bulk-update", "api-reference/deals/create-note", "api-reference/deals/list-notes"
+              "api-reference/deals/list",
+              "api-reference/deals/create",
+              "api-reference/deals/get",
+              "api-reference/deals/update",
+              "api-reference/deals/delete",
+              "api-reference/deals/bulk-create",
+              "api-reference/deals/bulk-update",
+              "api-reference/deals/create-note",
+              "api-reference/deals/list-notes"
             ]
           },
-          { "group": "Pipelines", "pages": ["api-reference/pipelines/list"] },
+          {
+            "group": "Pipelines",
+            "pages": [
+              "api-reference/pipelines/list"
+            ]
+          },
           {
             "group": "Tasks",
             "pages": [
-              "api-reference/tasks/list", "api-reference/tasks/create", "api-reference/tasks/get",
-              "api-reference/tasks/update", "api-reference/tasks/delete"
+              "api-reference/tasks/list",
+              "api-reference/tasks/create",
+              "api-reference/tasks/get",
+              "api-reference/tasks/update",
+              "api-reference/tasks/delete"
             ]
           },
           {
             "group": "Notes",
             "pages": [
-              "api-reference/notes/list", "api-reference/notes/create", "api-reference/notes/get",
-              "api-reference/notes/update", "api-reference/notes/delete"
+              "api-reference/notes/list",
+              "api-reference/notes/create",
+              "api-reference/notes/get",
+              "api-reference/notes/update",
+              "api-reference/notes/delete"
             ]
           },
           {
             "group": "Lists",
             "pages": [
-              "api-reference/lists/list", "api-reference/lists/create", "api-reference/lists/delete",
-              "api-reference/lists/add-contacts", "api-reference/lists/remove-contact"
+              "api-reference/lists/list",
+              "api-reference/lists/create",
+              "api-reference/lists/delete",
+              "api-reference/lists/add-contacts",
+              "api-reference/lists/remove-contact"
             ]
           },
-          { "group": "Tags", "pages": ["api-reference/tags/list"] },
+          {
+            "group": "Tags",
+            "pages": [
+              "api-reference/tags/list"
+            ]
+          },
           {
             "group": "Prospector",
-            "pages": ["api-reference/prospector/search", "api-reference/prospector/reveal", "api-reference/prospector/reveal-bulk"]
+            "pages": [
+              "api-reference/prospector/search",
+              "api-reference/prospector/reveal",
+              "api-reference/prospector/reveal-bulk"
+            ]
           },
-          { "group": "Prospects", "pages": ["api-reference/prospects/search", "api-reference/prospects/save"] },
+          {
+            "group": "Prospects",
+            "pages": [
+              "api-reference/prospects/search",
+              "api-reference/prospects/save"
+            ]
+          },
           {
             "group": "Campaigns",
             "pages": [
-              "api-reference/campaigns/list", "api-reference/campaigns/create", "api-reference/campaigns/get",
-              "api-reference/campaigns/update", "api-reference/campaigns/delete", "api-reference/campaigns/start",
-              "api-reference/campaigns/pause", "api-reference/campaigns/contacts",
-              "api-reference/campaigns/add-contacts", "api-reference/campaigns/remove-contact",
-              "api-reference/campaigns/steps", "api-reference/campaigns/create-step",
-              "api-reference/campaigns/update-step", "api-reference/campaigns/delete-step",
-              "api-reference/campaigns/stats", "api-reference/campaigns/events"
+              "api-reference/campaigns/list",
+              "api-reference/campaigns/create",
+              "api-reference/campaigns/get",
+              "api-reference/campaigns/update",
+              "api-reference/campaigns/delete",
+              "api-reference/campaigns/start",
+              "api-reference/campaigns/pause",
+              "api-reference/campaigns/contacts",
+              "api-reference/campaigns/add-contacts",
+              "api-reference/campaigns/remove-contact",
+              "api-reference/campaigns/steps",
+              "api-reference/campaigns/create-step",
+              "api-reference/campaigns/update-step",
+              "api-reference/campaigns/delete-step",
+              "api-reference/campaigns/stats",
+              "api-reference/campaigns/events"
             ]
           },
-          { "group": "Users", "pages": ["api-reference/users/list"] },
+          {
+            "group": "Users",
+            "pages": [
+              "api-reference/users/list"
+            ]
+          },
           {
             "group": "Activities",
-            "pages": ["api-reference/activities/list", "api-reference/activities/create", "api-reference/activities/get"]
+            "pages": [
+              "api-reference/activities/list",
+              "api-reference/activities/create",
+              "api-reference/activities/get"
+            ]
           },
           {
             "group": "Stats & Analytics",
-            "pages": ["api-reference/stats/pipeline", "api-reference/stats/activities", "api-reference/analytics/outreach"]
+            "pages": [
+              "api-reference/stats/pipeline",
+              "api-reference/stats/activities",
+              "api-reference/analytics/outreach"
+            ]
           },
           {
             "group": "Lexi AI",
@@ -110,11 +197,19 @@
           {
             "group": "Webhooks",
             "pages": [
-              "api-reference/webhooks/list", "api-reference/webhooks/create", "api-reference/webhooks/update",
-              "api-reference/webhooks/delete", "api-reference/webhooks/logs"
+              "api-reference/webhooks/list",
+              "api-reference/webhooks/create",
+              "api-reference/webhooks/update",
+              "api-reference/webhooks/delete",
+              "api-reference/webhooks/logs"
             ]
           },
-          { "group": "Audit Logs", "pages": ["api-reference/audit-logs/list"] },
+          {
+            "group": "Audit Logs",
+            "pages": [
+              "api-reference/audit-logs/list"
+            ]
+          },
           {
             "group": "Email",
             "pages": [
@@ -206,7 +301,9 @@
           },
           {
             "group": "Events",
-            "pages": ["api-reference/events/catalog"]
+            "pages": [
+              "api-reference/events/catalog"
+            ]
           },
           {
             "group": "API Keys",
@@ -228,18 +325,49 @@
     ],
     "global": {
       "anchors": [
-        { "anchor": "Website", "href": "https://leadlex.com", "icon": "globe" },
-        { "anchor": "Support", "href": "mailto:support@leadlex.com", "icon": "envelope" }
+        {
+          "anchor": "Website",
+          "href": "https://leadlex.com",
+          "icon": "globe"
+        },
+        {
+          "anchor": "Support",
+          "href": "mailto:support@leadlex.com",
+          "icon": "envelope"
+        }
       ]
     }
   },
-  "logo": { "light": "/logo/light.svg", "dark": "/logo/dark.svg", "href": "https://leadlex.com" },
-  "navbar": {
-    "links": [{ "label": "Support", "href": "mailto:support@leadlex.com" }],
-    "primary": { "type": "button", "label": "Dashboard", "href": "https://app.leadlex.com" }
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://leadlex.com"
   },
-  "contextual": { "options": ["copy", "chatgpt", "claude"] },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@leadlex.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://app.leadlex.com"
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "chatgpt",
+      "claude"
+    ]
+  },
   "footer": {
-    "socials": { "x": "https://x.com/leadlex", "github": "https://github.com/Lead-IP", "linkedin": "https://linkedin.com/company/leadlex" }
+    "socials": {
+      "x": "https://x.com/leadlex",
+      "github": "https://github.com/Lead-IP",
+      "linkedin": "https://linkedin.com/company/leadlex"
+    }
   }
 }

@@ -1,0 +1,74 @@
+---
+title: "Data Integrity"
+description: "How LeadLex handles names, timestamps, and entity linking across the API and Lexi agent"
+---
+
+All write endpoints (REST API, Lexi agent tools, and the CSV bulk importer) share a single writer module with three invariants.
+
+## 1. Name splitting is automatic
+
+When you create a contact, you can send any combination of `first_name`, `last_name`, `full_name`, or `email`. The API derives the missing pieces:
+
+<Steps>
+  <Step title="Last, First format">
+    `full_name: "Müller, Hans"` → `first=Hans, last=Müller, full="Hans Müller"`
+  </Step>
+  <Step title="Split full_name">
+    `full_name: "Hans Müller"` → split on last whitespace. Supports multi-word last names (`"Jean-Claude van Damme"` → last=`Damme`).
+  </Step>
+  <Step title="Compose full_name">
+    `first_name: "Hans", last_name: "Müller"` → `full="Hans Müller"` composed.
+  </Step>
+  <Step title="Derive from email">
+    `email: "hans.mueller@roche.com"` and no name → first=`Hans`, last=`Mueller`.
+  </Step>
+</Steps>
+
+A contact must have at least one of `first_name` / `last_name` / `full_name` / `email`. Otherwise `400 validation_error` is returned. No more blank-name rows.
+
+## 2. Client timestamps are honored
+
+Every create endpoint accepts an optional `created_date` in the body:
+
+```json
+{ "title": "Call notes from last week", "created_date": "2026-04-14T12:00:00Z", "contact_id": "…" }
+```
+
+The server preserves the value verbatim when it's within sanity bounds:
+
+- Must be a valid ISO 8601 string.
+- Must be no more than **24 h** in the future (small clock skew tolerated).
+- Must be no more than **5 years** in the past.
+
+Outside those bounds, the server `now()` is used instead. `created_date` is never null.
+
+This fixes the common UI display where historical events always appeared as "just now" — import a note from two weeks ago with its real timestamp and the timeline shows the correct age.
+
+## 3. Notes / tasks / meetings must have a parent link
+
+The API rejects orphans. Every `POST /v1/notes`, `POST /v1/tasks`, and the meeting handler requires at least one of:
+
+- `contact_id` — the linked contact
+- `related_company_id` (notes) / `company_id` (tasks, meetings) — the linked client company
+- `deal_id` — the linked deal
+- `event_id` — the linked event
+
+```json
+// Rejected — orphan note
+POST /v1/notes { "title": "Stray" }
+// →  400  "At least one parent link (contact_id, company_id, deal_id, or event_id) is required"
+
+// Accepted
+POST /v1/notes { "title": "Call summary", "contact_id": "789e..." }
+```
+
+Sub-resource endpoints inherit the link from the URL and don't need a body field:
+
+- `POST /v1/contacts/{id}/notes`
+- `POST /v1/companies/{id}/notes`
+
+## Lexi agent parity
+
+The Lexi AI assistant uses the same writer module. When you open Lexi from a contact detail page and say *"add a note: followed up by phone"*, Lexi auto-links the note to the contact you're viewing — no need to repeat the contact name. The focused entity is passed as `currentEntity: { type, id }` in the chat payload and falls through to any `create_note` / `create_task` / `schedule_meeting` tool call Lexi issues.
+
+Cross-workspace linking is blocked: the resolver validates every supplied UUID against the caller's workspace before inserting.
