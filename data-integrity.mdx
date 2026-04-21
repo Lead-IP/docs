@@ -72,3 +72,12 @@ Sub-resource endpoints inherit the link from the URL and don't need a body field
 The Lexi AI assistant uses the same writer module. When you open Lexi from a contact detail page and say *"add a note: followed up by phone"*, Lexi auto-links the note to the contact you're viewing — no need to repeat the contact name. The focused entity is passed as `currentEntity: { type, id }` in the chat payload and falls through to any `create_note` / `create_task` / `schedule_meeting` tool call Lexi issues.
 
 Cross-workspace linking is blocked: the resolver validates every supplied UUID against the caller's workspace before inserting.
+
+## For agents
+
+If you're building an AI agent that reads and writes LeadLex data, see [Using LeadLex from an Agent](/using-from-an-agent) for patterns covering:
+
+- The read → enrich → write loop with one-call context via `?include=notes,tasks,deals`
+- Writing notes and tasks by human name (`contact_name` / `company_name`) instead of UUID
+- Embedded parent summaries on list/get responses (`contact`, `company`, `deal`, `event` blocks)
+- When to use Lexi chat vs direct REST

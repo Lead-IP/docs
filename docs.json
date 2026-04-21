@@ -26,7 +26,8 @@
               "authentication",
               "webhooks",
               "examples",
-              "data-integrity"
+              "data-integrity",
+              "using-from-an-agent"
             ]
           }
         ]

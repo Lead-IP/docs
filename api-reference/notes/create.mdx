@@ -24,7 +24,15 @@ description: "Create a note linked to a contact, company, or deal"
 
 <ParamField body="contact_id" type="string">UUID of the linked contact. Must belong to your workspace.</ParamField>
 
+<ParamField body="contact_name" type="string">
+  Human name — the server fuzzy-matches within your workspace and resolves to a `contact_id`.
+  Use when an agent has a name but not a UUID. If multiple contacts match, returns
+  `400 ambiguous_reference` listing candidate UUIDs — retry with `contact_id`.
+</ParamField>
+
 <ParamField body="related_company_id" type="string">UUID of the linked company. (Also accepts `company_id` as an alias.)</ParamField>
+
+<ParamField body="company_name" type="string">Human name — same fuzzy resolution as `contact_name` but against the Company table.</ParamField>
 
 <ParamField body="deal_id" type="string">UUID of the linked deal.</ParamField>
 

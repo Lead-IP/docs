@@ -1,0 +1,157 @@
+---
+title: "Using LeadLex from an Agent"
+description: "Patterns for AI agents (Lexi, CrewAI, LangChain, custom bots) to read and write CRM data via the REST API"
+---
+
+LeadLex's REST API is designed so any agent — the built-in Lexi, a CrewAI researcher, a LangChain tool, or a shell script — can read and write CRM data with the same ergonomics Lexi's internal tools enjoy. This page covers the patterns an agent should use.
+
+## The read → enrich → write loop
+
+The most common agent workflow:
+
+<Steps>
+  <Step title="Read context">
+    `GET /v1/contacts/{id}?include=notes,tasks,deals` returns the contact plus the top 3 recent notes, open tasks, and open deals — one round-trip, no N+1.
+  </Step>
+  <Step title="Enrich">
+    Use the embedded `recent_notes` / `open_tasks` / `open_deals` to build a prompt. Each contact row also has a clean `first_name` / `last_name` / `full_name` even if the DB is missing pieces (self-healing on read).
+  </Step>
+  <Step title="Write">
+    `POST /v1/notes` with either `contact_id` (UUID) OR `contact_name` (fuzzy). The API resolves the name within the workspace. Same for `company_name` / `company_id`.
+  </Step>
+</Steps>
+
+```bash cURL — one-call context + log a note
+BASE=https://data.leadlex.com/functions/v1/api-gateway
+KEY=wbk_your_api_key
+
+# 1. Load context
+curl -s "$BASE/v1/contacts/789e…?include=notes,tasks,deals" \
+  -H "Authorization: Bearer $KEY" > context.json
+
+# 2. (agent composes reply from context.json)
+
+# 3. Log what happened — by name, not UUID
+curl -s -X POST "$BASE/v1/notes" \
+  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{
+    "title": "AI summary — Q2 IP audit",
+    "content": "Followed up on filing timeline. Hans confirmed budget.",
+    "contact_name": "Hans Müller",
+    "note_type": "call"
+  }'
+```
+
+## Writing by name (fuzzy lookup)
+
+Agents often have the human's name but not their UUID. Every create endpoint that takes a parent link accepts both:
+
+| Body field | What it does |
+|---|---|
+| `contact_id` | Explicit UUID. Wins if present. |
+| `contact_name` | Fuzzy match within the workspace. Resolves to `contact_id`. |
+| `company_id` / `related_company_id` | Explicit company UUID. |
+| `company_name` | Fuzzy company match. |
+
+### Disambiguation
+
+If the fuzzy name is ambiguous, the API returns **`400 ambiguous_reference`** with all candidate UUIDs in the message — agents should retry with the correct `contact_id`:
+
+```json
+{
+  "error": {
+    "code": "ambiguous_reference",
+    "message": "Multiple contacts match \"Hans\". Pass contact_id instead. Candidates:\n  - Hans Müller (789e...)\n  - Hans Schmidt (8a1f...)"
+  }
+}
+```
+
+This forces agents into a deterministic flow instead of silently writing against the wrong person.
+
+## Embedded parent summaries on reads
+
+`GET /v1/notes`, `GET /v1/tasks`, and their sub-resources return a compact linked-entity block per row so agents can render rich context without N+1 lookups:
+
+```json
+{
+  "data": {
+    "notes": [
+      {
+        "id": "note-uuid",
+        "title": "Q2 call",
+        "contact_id": "789e…",
+        "related_company_id": "abc…",
+        "deal_id": null,
+        "contact": { "id": "789e…", "full_name": "Hans Müller", "first_name": "Hans", "last_name": "Müller" },
+        "company": { "id": "abc…", "name": "Roche AG" },
+        "deal": null,
+        "event": null
+      }
+    ]
+  }
+}
+```
+
+Same for `/v1/tasks` (adds `event` too). One `GET` → enough data to say *"Note on Hans Müller at Roche AG"*.
+
+## Lexi chat vs direct REST
+
+When should an agent use Lexi's chat endpoint vs the REST API directly?
+
+| If you need… | Use |
+|---|---|
+| Natural-language understanding, multi-turn context, tool calling orchestration | `POST /v1/lexi/chat` — Lexi is already configured with 50+ tools |
+| Deterministic single-action read or write | REST API (this page) |
+| Bulk operations (`POST /v1/import/contacts`, `POST /v1/contacts/bulk-delete`) | REST API — Lexi's per-call credit model is too expensive |
+| Webhooks on events (contact.created, etc.) | REST API — Lexi's internal tool calls don't fire webhooks |
+| Embedding your own AI assistant with custom system prompt | REST API — build your own loop over these endpoints |
+
+## Agent-friendly conventions
+
+1. **Every write accepts `created_date`** — honored if within ±24 h / last 5 years, so you can log historical events with the real timestamp.
+2. **Every note/task/meeting requires a parent link** — `contact_id` OR `company_id` OR `deal_id` OR `event_id`. Prevents silent orphans that never show up on a detail page.
+3. **`GET /v1/contacts/{id}?include=notes,tasks,deals`** is your one-call context primitive. Pass `include=*` for everything.
+4. **Sub-resource endpoints** inherit the parent from the URL — e.g. `POST /v1/contacts/{id}/notes` doesn't need a body parent-link field.
+5. **Workspace scope is enforced** — every UUID is validated against `company_id = your-workspace`. Cross-tenant references return `not_found`.
+
+## Example: a CrewAI researcher agent
+
+Imagine a researcher that enriches a contact from web sources and logs its findings:
+
+```python
+import requests
+BASE = "https://data.leadlex.com/functions/v1/api-gateway"
+HEADERS = {"Authorization": "Bearer wbk_your_api_key", "Content-Type": "application/json"}
+
+def enrich_contact(name: str) -> str:
+    # 1. Resolve contact by name
+    r = requests.get(f"{BASE}/v1/contacts?search={name}", headers=HEADERS).json()
+    contacts = r["data"]["contacts"]
+    if not contacts: return f"No contact named {name}"
+    contact_id = contacts[0]["id"]
+
+    # 2. One-call context
+    ctx = requests.get(
+        f"{BASE}/v1/contacts/{contact_id}?include=notes,tasks,deals",
+        headers=HEADERS,
+    ).json()["data"]
+
+    # 3. Do the research (imagine web search here) and log back a note
+    findings = f"Last 3 notes: {[n['title'] for n in ctx.get('recent_notes', [])]}"
+    requests.post(f"{BASE}/v1/notes", headers=HEADERS, json={
+        "title": "Research summary",
+        "content": findings,
+        "contact_id": contact_id,  # UUID we already have
+        "note_type": "other",
+    })
+    return "logged"
+```
+
+No name-normalization code, no timestamp fudging, no orphan risk — the API enforces all of it.
+
+## See also
+
+- [Data Integrity](/data-integrity) — the write-side guarantees this page depends on
+- [Create Contact](/api-reference/contacts/create) — name handling details
+- [Create Note](/api-reference/notes/create) — parent-link rules + fuzzy write
+- [Create Task](/api-reference/tasks/create) — parent-link rules + fuzzy write

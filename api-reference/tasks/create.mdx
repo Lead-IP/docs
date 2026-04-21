@@ -20,6 +20,11 @@ description: "Create a new task linked to a contact, deal, or event"
 <ParamField body="due_date" type="string">Due date (ISO 8601 or `YYYY-MM-DD`)</ParamField>
 <ParamField body="assignee_id" type="string">Assignee user ID</ParamField>
 <ParamField body="contact_id" type="string">UUID of linked contact. Must belong to your workspace.</ParamField>
+<ParamField body="contact_name" type="string">
+  Human name — fuzzy-matched within your workspace and resolved to `contact_id`.
+  On ambiguous matches, returns `400 ambiguous_reference` with candidate UUIDs.
+</ParamField>
+<ParamField body="company_name" type="string">Human name — fuzzy Company match.</ParamField>
 <ParamField body="deal_id" type="string">UUID of linked deal.</ParamField>
 <ParamField body="event_id" type="string">UUID of linked event.</ParamField>
 <ParamField body="created_date" type="string">

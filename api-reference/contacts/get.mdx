@@ -12,6 +12,19 @@ description: "Retrieve a single contact by ID"
   Contact UUID
 </ParamField>
 
+### Query Parameters
+
+<ParamField query="include" type="string">
+  Optional comma-separated list of related resources to embed in the response.
+  Accepts any of `notes`, `tasks`, `deals`, or `*` for all. When omitted, only the
+  contact row is returned. One round-trip, no N+1.
+
+  - `include=notes` → top 3 most recent notes in `recent_notes[]`
+  - `include=tasks` → top 3 open tasks in `open_tasks[]`
+  - `include=deals` → top 3 most recently-updated deals where this contact is the primary in `open_deals[]`
+  - `include=*` → all three
+</ParamField>
+
 ### Headers
 
 ```
@@ -20,38 +33,36 @@ Authorization: Bearer wbk_your_api_key_here
 
 ## Response
 
+<Info>
+  **Self-healing names**: `first_name` / `last_name` / `full_name` are always populated in the response, even for legacy rows where the DB has only `full_name`. The server derives the missing pieces on read via the same rules documented on [Data Integrity](/data-integrity).
+</Info>
+
 <ResponseField name="data" type="object">
-  The contact object
+  The contact object (plus optional embedded resources when `include=` is set).
   <Expandable title="Contact properties">
-    <ResponseField name="id" type="string">
-      Unique contact ID (UUID)
+    <ResponseField name="id" type="string">Unique contact ID (UUID)</ResponseField>
+    <ResponseField name="first_name" type="string">First name (derived from `full_name` / email if DB is missing it)</ResponseField>
+    <ResponseField name="last_name" type="string">Last name</ResponseField>
+    <ResponseField name="full_name" type="string">Full name</ResponseField>
+    <ResponseField name="email" type="string">Email address</ResponseField>
+    <ResponseField name="phone" type="string">Phone number</ResponseField>
+    <ResponseField name="job_title" type="string">Job title or position</ResponseField>
+    <ResponseField name="company" type="string">Company name (string field on contact)</ResponseField>
+    <ResponseField name="related_company_id" type="string">UUID of linked Company record</ResponseField>
+    <ResponseField name="linkedin_url" type="string">LinkedIn profile URL</ResponseField>
+    <ResponseField name="priority" type="number">Priority (1=high, 2=medium, 3=low)</ResponseField>
+    <ResponseField name="tags" type="array">Tag strings</ResponseField>
+    <ResponseField name="custom_fields" type="object">Arbitrary JSON preserved from the original source (CSV column names, etc.)</ResponseField>
+    <ResponseField name="created_date" type="string">ISO 8601 timestamp</ResponseField>
+    <ResponseField name="updated_date" type="string">ISO 8601 timestamp of last update</ResponseField>
+    <ResponseField name="recent_notes" type="array">
+      (Only when `?include=notes` or `*`) Up to 3 most recent notes for this contact: `{id, title, content, note_type, category, created_date}`
     </ResponseField>
-    <ResponseField name="full_name" type="string">
-      Contact's full name
+    <ResponseField name="open_tasks" type="array">
+      (Only when `?include=tasks` or `*`) Up to 3 open tasks: `{id, title, status, priority, due_date, assigned_to_user_id}`
     </ResponseField>
-    <ResponseField name="email" type="string">
-      Email address
-    </ResponseField>
-    <ResponseField name="phone" type="string">
-      Phone number
-    </ResponseField>
-    <ResponseField name="job_title" type="string">
-      Job title or position
-    </ResponseField>
-    <ResponseField name="company_name" type="string">
-      Company name
-    </ResponseField>
-    <ResponseField name="linkedin_url" type="string">
-      LinkedIn profile URL
-    </ResponseField>
-    <ResponseField name="notes" type="string">
-      Additional notes
-    </ResponseField>
-    <ResponseField name="created_at" type="string">
-      ISO 8601 timestamp
-    </ResponseField>
-    <ResponseField name="updated_date" type="string">
-      ISO 8601 timestamp of last update
+    <ResponseField name="open_deals" type="array">
+      (Only when `?include=deals` or `*`) Up to 3 deals with this contact as primary: `{id, name, stage, estimated_value, updated_date}`
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -59,7 +70,12 @@ Authorization: Bearer wbk_your_api_key_here
 <CodeGroup>
 
 ```bash cURL
+# Basic — contact only
 curl https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000 \
+  -H "Authorization: Bearer wbk_your_api_key_here"
+
+# One-call agent context — contact + recent notes + open tasks + open deals
+curl "https://data.leadlex.com/functions/v1/api-gateway/v1/contacts/123e4567-e89b-12d3-a456-426614174000?include=notes,tasks,deals" \
   -H "Authorization: Bearer wbk_your_api_key_here"
 ```
 
@@ -91,21 +107,33 @@ console.log(data);
 
 </CodeGroup>
 
-### Example Response
+### Example Response (with `?include=notes,tasks,deals`)
 
 ```json
 {
   "data": {
     "id": "123e4567-e89b-12d3-a456-426614174000",
+    "first_name": "Jane",
+    "last_name": "Doe",
     "full_name": "Jane Doe",
     "email": "jane@example.com",
     "phone": "+1234567890",
     "job_title": "General Counsel",
-    "company_name": "Acme Legal",
-    "linkedin_url": "https://linkedin.com/in/janedoe",
-    "notes": "Met at conference. Interested in legal automation tools.",
-    "created_at": "2026-01-15T10:00:00Z",
-    "updated_date": "2026-02-24T14:30:00Z"
+    "company": "Acme Legal",
+    "related_company_id": "abc…",
+    "priority": 1,
+    "tags": ["VIP", "Q2-target"],
+    "created_date": "2026-01-15T10:00:00Z",
+    "updated_date": "2026-02-24T14:30:00Z",
+    "recent_notes": [
+      { "id": "n1", "title": "Intro call", "note_type": "call", "created_date": "2026-02-20T14:00:00Z" }
+    ],
+    "open_tasks": [
+      { "id": "t1", "title": "Send proposal", "status": "pending", "priority": "high", "due_date": "2026-03-01" }
+    ],
+    "open_deals": [
+      { "id": "d1", "name": "Acme Legal — Q2 retainer", "stage": "proposal", "estimated_value": 85000 }
+    ]
   }
 }
 ```
