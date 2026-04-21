@@ -46,10 +46,10 @@ Accept: text/event-stream
 
 | Event | Purpose |
 |-------|---------|
-| `thinking` | Intermediate reasoning step. `data: { "text": "..." }`. Safe to ignore if not rendering a progress UI. |
-| `tool_step` | Lexi is about to invoke or has completed a CRM tool. `data: { "tool": "...", "status": "started|completed", "summary": "..." }`. |
-| `text` | Incremental assistant text. `data: { "delta": "...", "conversation_id": "..." }`. Concatenate `delta` values to build the final response. |
-| `done` | Final event with usage metadata. `data: { "credits_remaining": 4840, "message_id": "msg_01HY1" }`. |
+| `thinking` | Intermediate reasoning step. Payload: `data: {"text": "..."}`. Safe to ignore if not rendering a progress UI. |
+| `tool_step` | Lexi is about to invoke or has completed a CRM tool. Payload: `data: {"tool": "...", "status": "started" or "completed", "summary": "..."}`. |
+| `text` | Incremental assistant text. Payload: `data: {"delta": "...", "conversation_id": "..."}`. Concatenate `delta` values to build the final response. |
+| `done` | Final event with usage metadata. Payload: `data: {"credits_remaining": 4840, "message_id": "msg_01HY1"}`. |
 
 The stream terminates with the literal line `data: [DONE]` followed by a newline, consistent with the OpenAI SSE convention.
 
