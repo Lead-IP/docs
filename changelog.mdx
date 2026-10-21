@@ -1,0 +1,22 @@
+---
+title: "Changelog"
+description: "What changed in the LeadLex developer docs, API and MCP server."
+rss: true
+---
+
+<Update label="October 21, 2026" description="MCP documentation" tags={["MCP", "Docs"]}>
+  ## LeadLex MCP server docs
+
+  The LeadLex MCP server now has its own section in these docs.
+
+  - Connect [Claude](/mcp-server/connect-claude), [ChatGPT](/mcp-server/connect-chatgpt), [Cursor](/mcp-server/connect-cursor) or [any other client](/mcp-server/connect-other) to `https://mcp.leadlex.com/mcp`.
+  - Sign in with OAuth 2.1 or a workspace API key. See [Authentication](/mcp-server/authentication).
+  - Browse all 99 [tools](/mcp-server/tools), the [resources and prompts](/mcp-server/resources-and-prompts) and [example requests](/mcp-server/examples).
+  - Read how workspace isolation and sending safeguards work on the [Security](/mcp-server/security) page.
+
+  ## API reference
+
+  - The OpenAPI spec is now published with the docs at `api-reference/openapi.yaml`.
+  - The docs use LeadLex branding.
+  - Two endpoints that were missing from the reference are now generated from the spec: `GET /v1/campaigns/{id}/steps/{stepId}` and `GET /v1/companies/{id}/documents`.
+</Update>
