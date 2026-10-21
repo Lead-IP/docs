@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "LeadLex",
   "colors": {
-    "primary": "#001ce0",
-    "light": "#e3f307",
-    "dark": "#001ce0"
+    "primary": "#0f5845",
+    "light": "#1f8a6c",
+    "dark": "#0b3d32"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -17,7 +17,8 @@
             "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart"
+              "quickstart",
+              "changelog"
             ]
           },
           {
@@ -28,6 +29,31 @@
               "examples",
               "data-integrity",
               "using-from-an-agent"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "MCP",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "mcp-server/overview",
+              "mcp-server/connect-claude",
+              "mcp-server/connect-chatgpt",
+              "mcp-server/connect-cursor",
+              "mcp-server/connect-other"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "mcp-server/authentication",
+              "mcp-server/tools",
+              "mcp-server/resources-and-prompts",
+              "mcp-server/examples",
+              "mcp-server/security"
             ]
           }
         ]
@@ -62,7 +88,8 @@
               "api-reference/companies/deals",
               "api-reference/companies/link-contacts",
               "api-reference/companies/create-note",
-              "api-reference/companies/list-notes"
+              "api-reference/companies/list-notes",
+              "api-reference/openapi.yaml GET /v1/companies/{id}/documents"
             ]
           },
           {
@@ -154,7 +181,8 @@
               "api-reference/campaigns/update-step",
               "api-reference/campaigns/delete-step",
               "api-reference/campaigns/stats",
-              "api-reference/campaigns/events"
+              "api-reference/campaigns/events",
+              "api-reference/openapi.yaml GET /v1/campaigns/{id}/steps/{stepId}"
             ]
           },
           {
@@ -328,8 +356,13 @@
       "anchors": [
         {
           "anchor": "Website",
-          "href": "https://leadlex.com",
+          "href": "https://www.leadlex.com",
           "icon": "globe"
+        },
+        {
+          "anchor": "Help center",
+          "href": "https://www.leadlex.com/help",
+          "icon": "circle-question"
         },
         {
           "anchor": "Support",
@@ -342,13 +375,17 @@
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg",
-    "href": "https://leadlex.com"
+    "href": "https://www.leadlex.com"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:support@leadlex.com"
+        "label": "Help center",
+        "href": "https://www.leadlex.com/help"
+      },
+      {
+        "label": "Website",
+        "href": "https://www.leadlex.com"
       }
     ],
     "primary": {
@@ -360,6 +397,7 @@
   "contextual": {
     "options": [
       "copy",
+      "view",
       "chatgpt",
       "claude"
     ]
@@ -369,6 +407,15 @@
       "x": "https://x.com/leadlex",
       "github": "https://github.com/Lead-IP",
       "linkedin": "https://linkedin.com/company/leadlex"
+    }
+  },
+  "api": {
+    "openapi": "api-reference/openapi.yaml",
+    "mdx": {
+      "server": "https://data.leadlex.com/functions/v1/api-gateway",
+      "auth": {
+        "method": "bearer"
+      }
     }
   }
 }
