@@ -1,0 +1,4765 @@
+# Copy of lovable-temp-old/openapi.yaml. Only change: `servers` now lists the base URL that answers
+# (data.leadlex.com/v1/... returns 404; /functions/v1/api-gateway/v1/... returns 401 without a key).
+openapi: 3.1.0
+info:
+  title: LeadLex API
+  version: "2026-04-17"
+  description: |
+    LeadLex CRM public API. Multi-tenant, workspace-scoped endpoints for contacts, companies,
+    deals, campaigns, Lexi AI, webhooks, and analytics. All requests require a workspace API
+    key (Bearer `wbk_<48 chars>`) and are rate-limited per key.
+
+    Error responses follow `{ error: { code, message, request_id } }`. Write endpoints accept
+    an optional `Idempotency-Key` header for safe retries. Every response carries
+    `X-Request-ID` and `X-RateLimit-*` headers.
+  contact:
+    name: LeadLex API Support
+    email: support@leadlex.com
+    url: https://leadlex.com/docs
+  license:
+    name: Proprietary
+    url: https://leadlex.com/terms
+servers:
+  - url: https://data.leadlex.com/functions/v1/api-gateway
+    description: Production
+tags:
+  - name: Contacts
+    description: Contact CRUD, tagging, notes, and exports.
+  - name: Companies
+    description: Company CRUD, links, and exports.
+  - name: Deals
+    description: Deal pipeline, bulk operations, and notes.
+  - name: Pipelines
+    description: Pipeline metadata.
+  - name: Tasks
+    description: Task management.
+  - name: Notes
+    description: Workspace-level notes.
+  - name: Lists
+    description: Contact lists and memberships.
+  - name: Tags
+    description: Tag catalog.
+  - name: Activities
+    description: Activity tracking.
+  - name: Campaigns
+    description: Outreach campaigns, steps, contacts, stats.
+  - name: Prospector
+    description: Prospect discovery and reveal.
+  - name: Lexi AI
+    description: Lexi assistant chat, tasks, autoresearch, and personalization.
+  - name: Conversations
+    description: Lexi conversation history.
+  - name: Webhooks
+    description: Webhook subscriptions and logs.
+  - name: Events
+    description: Webhook event catalog.
+  - name: Email
+    description: Email send, threads, enrichment.
+  - name: Calendar
+    description: Calendar events and sync.
+  - name: Channels
+    description: Multi-channel messaging (WhatsApp, SMS, etc.).
+  - name: Enrichment
+    description: Contact and company enrichment.
+  - name: AI
+    description: AI analysis endpoints.
+  - name: Documents
+    description: Document management and linking.
+  - name: Workflows
+    description: Automation workflows.
+  - name: API Keys
+    description: Workspace API key management.
+  - name: Settings
+    description: Workspace settings and provider config.
+  - name: Audit Logs
+    description: Audit log access.
+  - name: Users
+    description: Workspace users.
+  - name: Analytics
+    description: Outreach analytics.
+  - name: Stats
+    description: Pipeline and activity statistics.
+  - name: Import
+    description: Bulk import from CSV/JSON.
+  - name: Export
+    description: Bulk export as CSV.
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: wbk_<48 chars>
+      description: |
+        Workspace API key. Format `wbk_` followed by 48 URL-safe characters.
+        Send as `Authorization: Bearer wbk_...`.
+  headers:
+    X-Request-ID:
+      description: Unique identifier for this request (UUID v4).
+      schema:
+        type: string
+        format: uuid
+    X-RateLimit-Limit:
+      description: Maximum requests allowed in the current window.
+      schema:
+        type: integer
+    X-RateLimit-Remaining:
+      description: Requests remaining in the current window.
+      schema:
+        type: integer
+    X-RateLimit-Reset:
+      description: Unix epoch seconds when the window resets.
+      schema:
+        type: integer
+  parameters:
+    PageQuery:
+      name: page
+      in: query
+      description: 1-indexed page number.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPageQuery:
+      name: per_page
+      in: query
+      description: Items per page.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      description: Optional client-generated key (UUID recommended) to deduplicate retries. Cached responses replay within 24h.
+      required: false
+      schema:
+        type: string
+        maxLength: 255
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      description: Resource identifier (UUID).
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+              example: validation_error
+            message:
+              type: string
+              example: Invalid input.
+            request_id:
+              type: string
+              format: uuid
+    Meta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        per_page:
+          type: integer
+    Contact:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        title: { type: string }
+        company_name: { type: string }
+        linkedin_url: { type: string, format: uri }
+        tags:
+          type: array
+          items: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ContactCreate:
+      type: object
+      required: [first_name]
+      properties:
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        title: { type: string }
+        company_name: { type: string }
+        linkedin_url: { type: string, format: uri }
+        tags:
+          type: array
+          items: { type: string }
+    Company:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        domain: { type: string }
+        industry: { type: string }
+        size: { type: string }
+        description: { type: string }
+        website: { type: string, format: uri }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Deal:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        amount: { type: number }
+        currency: { type: string, example: EUR }
+        stage: { type: string }
+        pipeline_id: { type: string, format: uuid }
+        company_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        probability: { type: number, minimum: 0, maximum: 1 }
+        close_date: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    Pipeline:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        stages:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name: { type: string }
+              order: { type: integer }
+    Task:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status:
+          type: string
+          enum: [pending, in_progress, completed, cancelled]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        due_date: { type: string, format: date-time }
+        assigned_to_user_id: { type: string, format: uuid }
+        assigned_to_user_ids:
+          type: array
+          items: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+    Note:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        content: { type: string }
+        contact_id: { type: string, format: uuid }
+        company_id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        created_by: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+    List:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        contact_count: { type: integer }
+        created_at: { type: string, format: date-time }
+    Tag:
+      type: object
+      properties:
+        name: { type: string }
+        count: { type: integer }
+    Activity:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type:
+          type: string
+          enum: [email, call, meeting, note, task, other]
+        subject: { type: string }
+        body: { type: string }
+        contact_id: { type: string, format: uuid }
+        deal_id: { type: string, format: uuid }
+        occurred_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+    Campaign:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        status:
+          type: string
+          enum: [draft, active, paused, completed]
+        description: { type: string }
+        created_at: { type: string, format: date-time }
+    CampaignStep:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        campaign_id: { type: string, format: uuid }
+        order: { type: integer }
+        type:
+          type: string
+          enum: [email, task, wait, condition]
+        subject: { type: string }
+        body: { type: string }
+        delay_days: { type: integer }
+    Webhook:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        events:
+          type: array
+          items: { type: string }
+        active: { type: boolean }
+        secret: { type: string, description: HMAC signing secret (returned once on create) }
+        created_at: { type: string, format: date-time }
+    Document:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        mime_type: { type: string }
+        size_bytes: { type: integer }
+        url: { type: string, format: uri }
+        linked_entity_type:
+          type: string
+          enum: [contact, company, deal]
+        linked_entity_id: { type: string, format: uuid }
+        created_at: { type: string, format: date-time }
+    Workflow:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        trigger: { type: object, additionalProperties: true }
+        steps:
+          type: array
+          items: { type: object, additionalProperties: true }
+        enabled: { type: boolean }
+        created_at: { type: string, format: date-time }
+    ApiKey:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        prefix: { type: string, example: wbk_abc12345 }
+        key:
+          type: string
+          description: Full key (returned once on create).
+        permissions:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        created_at: { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time }
+    Conversation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [user, assistant, system, tool]
+              content: { type: string }
+              created_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CalendarEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        start_time: { type: string, format: date-time }
+        end_time: { type: string, format: date-time }
+        attendees:
+          type: array
+          items: { type: string, format: email }
+        location: { type: string }
+        description: { type: string }
+    EmailThread:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subject: { type: string }
+        participants:
+          type: array
+          items: { type: string, format: email }
+        message_count: { type: integer }
+        last_message_at: { type: string, format: date-time }
+    EmailMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        thread_id: { type: string, format: uuid }
+        from: { type: string, format: email }
+        to:
+          type: array
+          items: { type: string, format: email }
+        subject: { type: string }
+        body_html: { type: string }
+        body_text: { type: string }
+        sent_at: { type: string, format: date-time }
+    Correspondent:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        name: { type: string }
+        message_count: { type: integer }
+        last_contacted_at: { type: string, format: date-time }
+    ChannelMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        channel:
+          type: string
+          enum: [whatsapp, sms, telegram, slack]
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        from: { type: string }
+        to: { type: string }
+        body: { type: string }
+        sent_at: { type: string, format: date-time }
+    Provider:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        type: { type: string }
+        enabled: { type: boolean }
+    AuditLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        actor_id: { type: string, format: uuid }
+        action: { type: string }
+        resource_type: { type: string }
+        resource_id: { type: string }
+        metadata: { type: object, additionalProperties: true }
+        occurred_at: { type: string, format: date-time }
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        full_name: { type: string }
+        role: { type: string }
+        profile_picture_url: { type: string, format: uri }
+    LexiTask:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string }
+        status:
+          type: string
+          enum: [pending, approved, dismissed, executed]
+        proposal: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
+    Prospect:
+      type: object
+      properties:
+        id: { type: string }
+        first_name: { type: string }
+        last_name: { type: string }
+        title: { type: string }
+        company_name: { type: string }
+        email: { type: string, format: email }
+        linkedin_url: { type: string, format: uri }
+    ListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { type: object, additionalProperties: true }
+        meta:
+          $ref: "#/components/schemas/Meta"
+    BulkResult:
+      type: object
+      properties:
+        created: { type: integer }
+        updated: { type: integer }
+        deleted: { type: integer }
+        failed: { type: integer }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              index: { type: integer }
+              error: { type: string }
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key.
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: API key lacks the required permission scope.
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found.
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Rate limit exceeded.
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+        X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+        X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+        X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        Retry-After:
+          description: Seconds until retry allowed.
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationError:
+      description: Request body or parameters failed validation.
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+paths:
+  /v1/contacts:
+    get:
+      operationId: listContacts
+      summary: List contacts
+      description: List all contacts in the workspace with pagination.
+      tags: [Contacts]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PerPageQuery" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Contact" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createContact
+      summary: Create contact
+      description: Create a single contact.
+      tags: [Contacts]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactCreate" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/bulk:
+    post:
+      operationId: bulkCreateContacts
+      summary: Bulk create contacts
+      description: Create up to 500 contacts in one request.
+      tags: [Contacts]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contacts]
+              properties:
+                contacts:
+                  type: array
+                  maxItems: 500
+                  items: { $ref: "#/components/schemas/ContactCreate" }
+      responses:
+        "200":
+          description: Bulk create result
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/bulk-delete:
+    post:
+      operationId: bulkDeleteContacts
+      summary: Bulk delete contacts
+      description: Delete up to 500 contacts by ID in one request.
+      tags: [Contacts]
+      x-permission-scope: contacts:delete
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 500
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/merge:
+    post:
+      operationId: mergeContacts
+      summary: Merge duplicate contacts
+      description: Merge up to 50 duplicate contacts into a primary record.
+      tags: [Contacts]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [primary_id, duplicate_ids]
+              properties:
+                primary_id: { type: string, format: uuid }
+                duplicate_ids:
+                  type: array
+                  maxItems: 50
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/export:
+    get:
+      operationId: exportContacts
+      summary: Export contacts
+      description: Export contacts as CSV. Up to 50,000 rows per export.
+      tags: [Export]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: CSV file
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            text/csv:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getContact
+      summary: Get contact
+      description: Retrieve a single contact.
+      tags: [Contacts]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateContact
+      summary: Update contact
+      description: Partially update a contact.
+      tags: [Contacts]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactCreate" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteContact
+      summary: Delete contact
+      description: Delete a single contact.
+      tags: [Contacts]
+      x-permission-scope: contacts:delete
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/{id}/activities:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listContactActivities
+      summary: List activities for contact
+      description: List activities associated with a contact.
+      tags: [Activities]
+      x-permission-scope: activities:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Activity" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/{id}/tags:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: addContactTags
+      summary: Add tags to contact
+      description: Add one or more tags to a contact.
+      tags: [Contacts]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tags]
+              properties:
+                tags:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/{id}/notes:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listContactNotes
+      summary: List notes for contact
+      description: List notes linked to a contact.
+      tags: [Contacts]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Note" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createContactNote
+      summary: Create note on contact
+      description: Create a note attached to a contact.
+      tags: [Contacts]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/contacts/{id}/documents:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listContactDocuments
+      summary: List documents for contact
+      description: List documents linked to a contact.
+      tags: [Documents]
+      x-permission-scope: documents:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Document" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/import/contacts:
+    post:
+      operationId: importContacts
+      summary: Import contacts
+      description: Import contacts from CSV or JSON payload.
+      tags: [Import]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format: { type: string, enum: [csv, json] }
+                data: { type: string }
+      responses:
+        "200":
+          description: Import result
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies:
+    get:
+      operationId: listCompanies
+      summary: List companies
+      description: List companies in the workspace.
+      tags: [Companies]
+      x-permission-scope: companies:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PerPageQuery" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Company" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createCompany
+      summary: Create company
+      description: Create a single company.
+      tags: [Companies]
+      x-permission-scope: companies:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Company" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies/export:
+    get:
+      operationId: exportCompanies
+      summary: Export companies
+      description: Export companies as CSV (up to 50,000 rows).
+      tags: [Export]
+      x-permission-scope: companies:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: CSV file
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            text/csv:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getCompany
+      summary: Get company
+      description: Retrieve a single company.
+      tags: [Companies]
+      x-permission-scope: companies:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateCompany
+      summary: Update company
+      description: Partially update a company.
+      tags: [Companies]
+      x-permission-scope: companies:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Company" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteCompany
+      summary: Delete company
+      description: Delete a company.
+      tags: [Companies]
+      x-permission-scope: companies:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies/{id}/contacts:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listCompanyContacts
+      summary: List contacts for company
+      description: List contacts linked to this company.
+      tags: [Companies]
+      x-permission-scope: companies:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Contact" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies/{id}/deals:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listCompanyDeals
+      summary: List deals for company
+      description: List deals linked to this company.
+      tags: [Companies]
+      x-permission-scope: companies:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Deal" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies/{id}/contacts/link:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: linkCompanyContacts
+      summary: Link contacts to company
+      description: Associate contacts with a company.
+      tags: [Companies]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies/{id}/notes:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listCompanyNotes
+      summary: List notes for company
+      description: List notes attached to a company.
+      tags: [Companies]
+      x-permission-scope: companies:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Note" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createCompanyNote
+      summary: Create note on company
+      description: Add a note to a company.
+      tags: [Companies]
+      x-permission-scope: companies:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/companies/{id}/documents:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listCompanyDocuments
+      summary: List documents for company
+      description: List documents linked to a company.
+      tags: [Documents]
+      x-permission-scope: documents:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Document" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/import/companies:
+    post:
+      operationId: importCompanies
+      summary: Import companies
+      description: Import companies from CSV or JSON.
+      tags: [Import]
+      x-permission-scope: companies:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                format: { type: string, enum: [csv, json] }
+                data: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/deals:
+    get:
+      operationId: listDeals
+      summary: List deals
+      description: List deals in the workspace.
+      tags: [Deals]
+      x-permission-scope: deals:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PerPageQuery" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Deal" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createDeal
+      summary: Create deal
+      description: Create a single deal.
+      tags: [Deals]
+      x-permission-scope: deals:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Deal" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Deal" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/deals/bulk:
+    post:
+      operationId: bulkCreateDeals
+      summary: Bulk create deals
+      description: Create up to 500 deals in one request.
+      tags: [Deals]
+      x-permission-scope: deals:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deals]
+              properties:
+                deals:
+                  type: array
+                  maxItems: 500
+                  items: { $ref: "#/components/schemas/Deal" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: bulkUpdateDeals
+      summary: Bulk update deals
+      description: Update up to 100 deals in one request.
+      tags: [Deals]
+      x-permission-scope: deals:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deals]
+              properties:
+                deals:
+                  type: array
+                  maxItems: 100
+                  items: { $ref: "#/components/schemas/Deal" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/deals/bulk-delete:
+    post:
+      operationId: bulkDeleteDeals
+      summary: Bulk delete deals
+      description: Delete up to 500 deals by ID.
+      tags: [Deals]
+      x-permission-scope: deals:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 500
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/deals/export:
+    get:
+      operationId: exportDeals
+      summary: Export deals
+      description: Export deals as CSV (up to 50,000 rows).
+      tags: [Export]
+      x-permission-scope: deals:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: CSV file
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            text/csv:
+              schema: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/deals/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getDeal
+      summary: Get deal
+      description: Retrieve a single deal.
+      tags: [Deals]
+      x-permission-scope: deals:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Deal" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateDeal
+      summary: Update deal
+      description: Partially update a deal.
+      tags: [Deals]
+      x-permission-scope: deals:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Deal" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Deal" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteDeal
+      summary: Delete deal
+      description: Delete a deal.
+      tags: [Deals]
+      x-permission-scope: deals:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/deals/{id}/notes:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listDealNotes
+      summary: List notes for deal
+      description: List notes linked to a deal.
+      tags: [Deals]
+      x-permission-scope: deals:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Note" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createDealNote
+      summary: Create note on deal
+      description: Add a note to a deal.
+      tags: [Deals]
+      x-permission-scope: deals:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/deals/{id}/documents:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listDealDocuments
+      summary: List documents for deal
+      description: List documents linked to a deal.
+      tags: [Documents]
+      x-permission-scope: documents:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Document" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/pipelines:
+    get:
+      operationId: listPipelines
+      summary: List pipelines
+      description: List all pipelines.
+      tags: [Pipelines]
+      x-permission-scope: deals:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Pipeline" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/tasks:
+    get:
+      operationId: listTasks
+      summary: List tasks
+      description: List tasks in the workspace.
+      tags: [Tasks]
+      x-permission-scope: activities:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PerPageQuery" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Task" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createTask
+      summary: Create task
+      description: Create a new task.
+      tags: [Tasks]
+      x-permission-scope: activities:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Task" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/tasks/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getTask
+      summary: Get task
+      description: Retrieve a single task.
+      tags: [Tasks]
+      x-permission-scope: activities:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateTask
+      summary: Update task
+      description: Partially update a task.
+      tags: [Tasks]
+      x-permission-scope: activities:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Task" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteTask
+      summary: Delete task
+      description: Delete a task.
+      tags: [Tasks]
+      x-permission-scope: activities:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/notes:
+    get:
+      operationId: listNotes
+      summary: List notes
+      description: List workspace-level notes.
+      tags: [Notes]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/PageQuery" }
+        - { $ref: "#/components/parameters/PerPageQuery" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Note" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createNote
+      summary: Create note
+      description: Create a workspace note.
+      tags: [Notes]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Note" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/notes/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getNote
+      summary: Get note
+      description: Retrieve a single note.
+      tags: [Notes]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateNote
+      summary: Update note
+      description: Partially update a note.
+      tags: [Notes]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Note" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Note" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteNote
+      summary: Delete note
+      description: Delete a note.
+      tags: [Notes]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lists:
+    get:
+      operationId: listLists
+      summary: List lists
+      description: List contact lists.
+      tags: [Lists]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/List" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createList
+      summary: Create list
+      description: Create a new contact list.
+      tags: [Lists]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/List" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/List" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lists/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    delete:
+      operationId: deleteList
+      summary: Delete list
+      description: Delete a contact list.
+      tags: [Lists]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lists/{id}/contacts:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: addContactsToList
+      summary: Add contacts to list
+      description: Add up to 1,000 contacts to a list in one request.
+      tags: [Lists]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contact_ids]
+              properties:
+                contact_ids:
+                  type: array
+                  maxItems: 1000
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/List" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lists/{id}/contacts/{contactId}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+      - name: contactId
+        in: path
+        required: true
+        description: Contact ID
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: removeContactFromList
+      summary: Remove contact from list
+      description: Remove a contact from a list.
+      tags: [Lists]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Removed
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/tags:
+    get:
+      operationId: listTags
+      summary: List tags
+      description: List tags used in the workspace.
+      tags: [Tags]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Tag" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/activities:
+    post:
+      operationId: createActivity
+      summary: Create activity
+      description: Create an activity record.
+      tags: [Activities]
+      x-permission-scope: activities:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Activity" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Activity" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/activities/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getActivity
+      summary: Get activity
+      description: Retrieve a single activity.
+      tags: [Activities]
+      x-permission-scope: activities:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Activity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns:
+    get:
+      operationId: listCampaigns
+      summary: List campaigns
+      description: List all campaigns.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Campaign" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createCampaign
+      summary: Create campaign
+      description: Create a new campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Campaign" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Campaign" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getCampaign
+      summary: Get campaign
+      description: Retrieve a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Campaign" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateCampaign
+      summary: Update campaign
+      description: Partially update a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Campaign" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Campaign" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteCampaign
+      summary: Delete campaign
+      description: Delete a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/start:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: startCampaign
+      summary: Start campaign
+      description: Activate a draft or paused campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Campaign" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/pause:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: pauseCampaign
+      summary: Pause campaign
+      description: Pause an active campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Campaign" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/steps:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listCampaignSteps
+      summary: List campaign steps
+      description: List steps in a campaign sequence.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/CampaignStep" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createCampaignStep
+      summary: Create campaign step
+      description: Append a step to the sequence.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignStep" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CampaignStep" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/steps/{stepId}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+      - name: stepId
+        in: path
+        required: true
+        description: Step ID
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getCampaignStep
+      summary: Get campaign step
+      description: Retrieve a single campaign step.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CampaignStep" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateCampaignStep
+      summary: Update campaign step
+      description: Partially update a campaign step.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignStep" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CampaignStep" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteCampaignStep
+      summary: Delete campaign step
+      description: Delete a campaign step.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/contacts:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listCampaignContacts
+      summary: List campaign contacts
+      description: List contacts enrolled in a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Contact" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: addCampaignContacts
+      summary: Add contacts to campaign
+      description: Enroll contacts in a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contact_ids]
+              properties:
+                contact_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added: { type: integer }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/contacts/{contactId}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+      - name: contactId
+        in: path
+        required: true
+        description: Contact ID
+        schema: { type: string, format: uuid }
+    delete:
+      operationId: removeCampaignContact
+      summary: Remove contact from campaign
+      description: Unenroll a contact from a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Removed
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/stats:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getCampaignStats
+      summary: Get campaign stats
+      description: Retrieve aggregate stats for a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: integer }
+                  opened: { type: integer }
+                  replied: { type: integer }
+                  bounced: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/campaigns/{id}/events:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listCampaignEvents
+      summary: List campaign events
+      description: List events (sends, opens, replies) for a campaign.
+      tags: [Campaigns]
+      x-permission-scope: campaigns:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/prospects/search:
+    post:
+      operationId: searchProspects
+      summary: Search saved prospects
+      description: Search prospects in the workspace.
+      tags: [Prospector]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query: { type: string }
+                filters: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Prospect" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/prospects/save:
+    post:
+      operationId: saveProspects
+      summary: Save prospects as contacts
+      description: Convert prospect results into contacts.
+      tags: [Prospector]
+      x-permission-scope: contacts:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prospects]
+              properties:
+                prospects:
+                  type: array
+                  items: { $ref: "#/components/schemas/Prospect" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/prospector/search:
+    post:
+      operationId: prospectorSearch
+      summary: Search prospect database
+      description: Search the external prospect database.
+      tags: [Prospector]
+      x-permission-scope: prospects:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query: { type: string }
+                filters: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Prospect" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/prospector/reveal:
+    post:
+      operationId: prospectorReveal
+      summary: Reveal prospect contact info
+      description: Reveal email/phone for a single prospect.
+      tags: [Prospector]
+      x-permission-scope: prospects:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prospect_id]
+              properties:
+                prospect_id: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Prospect" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/prospector/reveal/bulk:
+    post:
+      operationId: prospectorRevealBulk
+      summary: Bulk reveal prospects
+      description: Reveal contact info for multiple prospects.
+      tags: [Prospector]
+      x-permission-scope: prospects:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prospect_ids]
+              properties:
+                prospect_ids:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BulkResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/chat:
+    post:
+      operationId: lexiChat
+      summary: Lexi chat (non-streaming)
+      description: Send a message to Lexi and receive a full reply.
+      tags: [Lexi AI]
+      x-permission-scope: lexi:lexi
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                conversation_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  conversation_id: { type: string, format: uuid }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/chat/stream:
+    post:
+      operationId: lexiChatStream
+      summary: Lexi chat (streaming, SSE)
+      description: |
+        Server-Sent Events stream. Emits `thinking`, `text`, `tool_step`, and `done` events.
+        Each event is encoded as `data: <json>\n\n`. Stream terminates with `data: [DONE]`.
+      tags: [Lexi AI]
+      x-permission-scope: lexi:lexi
+      x-sse: true
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                conversation_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: "SSE stream. Event types include `thinking`, `text`, `tool_step`, `done`; terminator `data: [DONE]`."
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: "Stream of `data: <json>\\n\\n` frames."
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/tasks:
+    get:
+      operationId: listLexiTasks
+      summary: List Lexi tasks
+      description: List pending tasks proposed by Lexi.
+      tags: [Lexi AI]
+      x-permission-scope: lexi:lexi
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/LexiTask" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/tasks/{id}/approve:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: approveLexiTask
+      summary: Approve Lexi task
+      description: Approve and execute a proposed Lexi task.
+      tags: [Lexi AI]
+      x-permission-scope: lexi:lexi
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LexiTask" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/tasks/{id}/dismiss:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: dismissLexiTask
+      summary: Dismiss Lexi task
+      description: Dismiss a proposed Lexi task.
+      tags: [Lexi AI]
+      x-permission-scope: lexi:lexi
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LexiTask" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/autoresearch:
+    post:
+      operationId: lexiAutoresearch
+      summary: Lexi autoresearch
+      description: Kick off Lexi autoresearch on a contact, company, or topic.
+      tags: [Lexi AI]
+      x-permission-scope: lexi:lexi
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_id: { type: string, format: uuid }
+                company_id: { type: string, format: uuid }
+                topic: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  findings: { type: array, items: { type: object, additionalProperties: true } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/personalize-email:
+    post:
+      operationId: lexiPersonalizeEmail
+      summary: Personalize email with Lexi
+      description: Generate a personalized email draft for a contact.
+      tags: [Lexi AI]
+      x-permission-scope: lexi:lexi
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contact_id]
+              properties:
+                contact_id: { type: string, format: uuid }
+                tone: { type: string }
+                template: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subject: { type: string }
+                  body: { type: string }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/conversations:
+    get:
+      operationId: listConversations
+      summary: List conversations
+      description: List Lexi conversation history.
+      tags: [Conversations]
+      x-permission-scope: conversations:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Conversation" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/lexi/conversations/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getConversation
+      summary: Get conversation
+      description: Retrieve a single conversation with messages.
+      tags: [Conversations]
+      x-permission-scope: conversations:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateConversation
+      summary: Update conversation
+      description: Update conversation metadata (e.g. title).
+      tags: [Conversations]
+      x-permission-scope: conversations:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Conversation" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteConversation
+      summary: Delete conversation
+      description: Delete a conversation.
+      tags: [Conversations]
+      x-permission-scope: conversations:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/webhooks:
+    get:
+      operationId: listWebhooks
+      summary: List webhooks
+      description: List webhook subscriptions.
+      tags: [Webhooks]
+      x-permission-scope: webhooks:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Webhook" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createWebhook
+      summary: Create webhook
+      description: |
+        Create a webhook subscription. Supported events (27 total):
+                `contact.created`, `contact.updated`, `contact.deleted`, `contact.bulk_created`,
+                `company.created`, `company.updated`, `company.deleted`,
+                `deal.created`, `deal.updated`, `deal.deleted`, `deal.bulk_created`, `deal.bulk_updated`,
+                `list.created`, `list.deleted`, `list.contacts_added`, `list.contacts_removed`,
+                `campaign.created`, `campaign.started`, `campaign.paused`, `campaign.deleted`,
+                `campaign.step_created`, `campaign.contacts_added`,
+                `activity.created`,
+                `task.created`, `task.updated`, `task.approved`, `task.dismissed`.
+      tags: [Webhooks]
+      x-permission-scope: webhooks:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Webhook" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Webhook" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/webhooks/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    patch:
+      operationId: updateWebhook
+      summary: Update webhook
+      description: Update a webhook subscription.
+      tags: [Webhooks]
+      x-permission-scope: webhooks:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Webhook" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Webhook" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteWebhook
+      summary: Delete webhook
+      description: Delete a webhook subscription.
+      tags: [Webhooks]
+      x-permission-scope: webhooks:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/webhooks/{id}/logs:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listWebhookLogs
+      summary: List webhook delivery logs
+      description: List delivery attempts for a webhook.
+      tags: [Webhooks]
+      x-permission-scope: webhooks:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/events/catalog:
+    get:
+      operationId: getEventsCatalog
+      summary: Get webhook event catalog
+      description: Retrieve the catalog of supported webhook event types.
+      tags: [Events]
+      x-permission-scope: webhooks:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        description: { type: string }
+                        payload_schema: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/email/send:
+    post:
+      operationId: sendEmail
+      summary: Send email
+      description: Send an email via the configured provider.
+      tags: [Email]
+      x-permission-scope: email:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to, subject, body]
+              properties:
+                to: { type: array, items: { type: string, format: email } }
+                subject: { type: string }
+                body: { type: string }
+                contact_id: { type: string, format: uuid }
+      responses:
+        "201":
+          description: Sent
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EmailMessage" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/email/threads:
+    get:
+      operationId: listEmailThreads
+      summary: List email threads
+      description: List email threads synced to the workspace.
+      tags: [Email]
+      x-permission-scope: email:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/EmailThread" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/email/threads/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getEmailThread
+      summary: Get email thread
+      description: Retrieve a single email thread with messages.
+      tags: [Email]
+      x-permission-scope: email:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  thread: { $ref: "#/components/schemas/EmailThread" }
+                  messages:
+                    type: array
+                    items: { $ref: "#/components/schemas/EmailMessage" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/email/sync:
+    post:
+      operationId: syncEmail
+      summary: Sync email
+      description: Trigger an email sync with the connected provider.
+      tags: [Email]
+      x-permission-scope: email:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced: { type: integer }
+                  status: { type: string }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/email/enrich:
+    post:
+      operationId: enrichEmail
+      summary: Enrich email
+      description: Enrich an email address with contact and company data.
+      tags: [Email]
+      x-permission-scope: enrichment:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contact: { $ref: "#/components/schemas/Contact" }
+                  company: { $ref: "#/components/schemas/Company" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/email/correspondents:
+    get:
+      operationId: listEmailCorrespondents
+      summary: List email correspondents
+      description: List distinct email correspondents by message volume.
+      tags: [Email]
+      x-permission-scope: email:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Correspondent" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/calendar/events:
+    get:
+      operationId: listCalendarEvents
+      summary: List calendar events
+      description: List calendar events for the workspace.
+      tags: [Calendar]
+      x-permission-scope: calendar:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/CalendarEvent" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/calendar/events/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getCalendarEvent
+      summary: Get calendar event
+      description: Retrieve a single calendar event.
+      tags: [Calendar]
+      x-permission-scope: calendar:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CalendarEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/calendar/sync:
+    post:
+      operationId: syncCalendar
+      summary: Sync calendar
+      description: Trigger a calendar sync with the connected provider.
+      tags: [Calendar]
+      x-permission-scope: calendar:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced: { type: integer }
+                  status: { type: string }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/channels/send:
+    post:
+      operationId: sendChannelMessage
+      summary: Send channel message
+      description: Send a message via WhatsApp, SMS, Telegram, or Slack.
+      tags: [Channels]
+      x-permission-scope: channels:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [channel, to, body]
+              properties:
+                channel: { type: string, enum: [whatsapp, sms, telegram, slack] }
+                to: { type: string }
+                body: { type: string }
+      responses:
+        "201":
+          description: Sent
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChannelMessage" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/channels/messages:
+    get:
+      operationId: listChannelMessages
+      summary: List channel messages
+      description: List inbound/outbound channel messages.
+      tags: [Channels]
+      x-permission-scope: channels:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ChannelMessage" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/channels/providers:
+    get:
+      operationId: listChannelProviders
+      summary: List channel providers
+      description: List configured channel providers.
+      tags: [Channels]
+      x-permission-scope: channels:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Provider" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/enrich/contact:
+    post:
+      operationId: enrichContact
+      summary: Enrich contact
+      description: Enrich a contact with external data.
+      tags: [Enrichment]
+      x-permission-scope: enrichment:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_id: { type: string, format: uuid }
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/enrich/company:
+    post:
+      operationId: enrichCompany
+      summary: Enrich company
+      description: Enrich a company with external data.
+      tags: [Enrichment]
+      x-permission-scope: enrichment:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                company_id: { type: string, format: uuid }
+                domain: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Company" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/scan/business-card:
+    post:
+      operationId: scanBusinessCard
+      summary: Scan business card
+      description: OCR a business card image into a contact.
+      tags: [Enrichment]
+      x-permission-scope: enrichment:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [image_base64]
+              properties:
+                image_base64: { type: string }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contact" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/ai/analyze-notes:
+    post:
+      operationId: aiAnalyzeNotes
+      summary: Analyze notes
+      description: Summarize and extract insights from contact notes.
+      tags: [AI]
+      x-permission-scope: ai:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/ai/detect-duplicates:
+    post:
+      operationId: aiDetectDuplicates
+      summary: Detect duplicate contacts
+      description: Detect likely duplicate contacts using AI.
+      tags: [AI]
+      x-permission-scope: ai:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/ai/suggest-followups:
+    post:
+      operationId: aiSuggestFollowups
+      summary: Suggest follow-ups
+      description: Suggest follow-up actions for stale contacts.
+      tags: [AI]
+      x-permission-scope: ai:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/ai/suggest-meetings:
+    post:
+      operationId: aiSuggestMeetings
+      summary: Suggest meetings
+      description: Recommend meetings based on recent activity.
+      tags: [AI]
+      x-permission-scope: ai:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/ai/legal-insights:
+    post:
+      operationId: aiLegalInsights
+      summary: Generate legal insights
+      description: Generate legal-tech specific insights.
+      tags: [AI]
+      x-permission-scope: ai:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/ai/analyze-document:
+    post:
+      operationId: aiAnalyzeDocument
+      summary: Analyze document
+      description: Extract structured data from a document.
+      tags: [AI]
+      x-permission-scope: ai:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/ai/discover-conferences:
+    post:
+      operationId: aiDiscoverConferences
+      summary: Discover conferences
+      description: Discover upcoming industry conferences.
+      tags: [AI]
+      x-permission-scope: ai:read
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/documents:
+    get:
+      operationId: listDocuments
+      summary: List documents
+      description: List documents in the workspace.
+      tags: [Documents]
+      x-permission-scope: documents:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Document" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createDocument
+      summary: Upload document
+      description: Upload a new document.
+      tags: [Documents]
+      x-permission-scope: documents:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Document" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/documents/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getDocument
+      summary: Get document
+      description: Retrieve a single document.
+      tags: [Documents]
+      x-permission-scope: documents:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteDocument
+      summary: Delete document
+      description: Delete a document.
+      tags: [Documents]
+      x-permission-scope: documents:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/documents/{id}/link:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    post:
+      operationId: linkDocument
+      summary: Link document to entity
+      description: Attach a document to a contact, company, or deal.
+      tags: [Documents]
+      x-permission-scope: documents:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entity_type, entity_id]
+              properties:
+                entity_type: { type: string, enum: [contact, company, deal] }
+                entity_id: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Document" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/workflows:
+    get:
+      operationId: listWorkflows
+      summary: List workflows
+      description: List automation workflows.
+      tags: [Workflows]
+      x-permission-scope: workflows:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Workflow" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createWorkflow
+      summary: Create workflow
+      description: Create a new workflow.
+      tags: [Workflows]
+      x-permission-scope: workflows:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Workflow" }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workflow" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/workflows/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: getWorkflow
+      summary: Get workflow
+      description: Retrieve a single workflow.
+      tags: [Workflows]
+      x-permission-scope: workflows:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workflow" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    patch:
+      operationId: updateWorkflow
+      summary: Update workflow
+      description: Partially update a workflow.
+      tags: [Workflows]
+      x-permission-scope: workflows:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Workflow" }
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workflow" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    delete:
+      operationId: deleteWorkflow
+      summary: Delete workflow
+      description: Delete a workflow.
+      tags: [Workflows]
+      x-permission-scope: workflows:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/workflows/{id}/logs:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    get:
+      operationId: listWorkflowLogs
+      summary: List workflow run logs
+      description: List execution logs for a workflow.
+      tags: [Workflows]
+      x-permission-scope: workflows:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/api-keys:
+    get:
+      operationId: listApiKeys
+      summary: List API keys
+      description: List workspace API keys (prefixes only).
+      tags: [API Keys]
+      x-permission-scope: api_keys:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ApiKey" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      operationId: createApiKey
+      summary: Create API key
+      description: Create a new workspace API key. Full key returned once.
+      tags: [API Keys]
+      x-permission-scope: api_keys:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, permissions]
+              properties:
+                name: { type: string }
+                permissions: { type: object, additionalProperties: { type: array, items: { type: string } } }
+      responses:
+        "201":
+          description: Created
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiKey" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/api-keys/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/ResourceId" }
+    delete:
+      operationId: deleteApiKey
+      summary: Delete API key
+      description: Revoke an API key.
+      tags: [API Keys]
+      x-permission-scope: api_keys:write
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204":
+          description: Deleted
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/settings:
+    get:
+      operationId: getSettings
+      summary: Get workspace settings
+      description: Retrieve workspace settings.
+      tags: [Settings]
+      x-permission-scope: settings:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/settings/providers:
+    get:
+      operationId: listProviders
+      summary: List configured providers
+      description: List integration providers configured for the workspace.
+      tags: [Settings]
+      x-permission-scope: settings:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Provider" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/audit-logs:
+    get:
+      operationId: listAuditLogs
+      summary: List audit logs
+      description: List audit log entries. Admin keys only (requires `contacts:read`).
+      tags: [Audit Logs]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditLog" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/users:
+    get:
+      operationId: listUsers
+      summary: List workspace users
+      description: List workspace users. Requires `contacts:read`.
+      tags: [Users]
+      x-permission-scope: contacts:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/User" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/analytics/outreach:
+    get:
+      operationId: getOutreachAnalytics
+      summary: Get outreach analytics
+      description: Aggregate outreach analytics.
+      tags: [Analytics]
+      x-permission-scope: activities:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/stats/pipeline:
+    get:
+      operationId: getPipelineStats
+      summary: Get pipeline stats
+      description: Aggregate stats across the deal pipeline.
+      tags: [Stats]
+      x-permission-scope: deals:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/stats/activities:
+    get:
+      operationId: getActivityStats
+      summary: Get activity stats
+      description: Aggregate stats across activities.
+      tags: [Stats]
+      x-permission-scope: activities:read
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
