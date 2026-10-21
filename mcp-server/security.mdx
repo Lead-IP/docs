@@ -1,0 +1,40 @@
+---
+title: "Security"
+description: "How the LeadLex MCP server protects your workspace data."
+---
+
+This page lists what the server code enforces. For company-wide security, data location and subprocessors, see the [LeadLex security page](https://www.leadlex.com/security).
+
+## Workspace isolation
+
+- Every request resolves to one workspace from the API key or OAuth token.
+- Tools read and write only that workspace. They do not accept a workspace or company id as an argument.
+- Company tools return your client companies. The record of your own workspace, which holds plan and billing data, is not reachable.
+
+## Credentials
+
+- API keys are validated by a separate LeadLex service. The MCP server does not log the raw key.
+- OAuth access tokens, refresh tokens, authorization codes and client secrets are stored as SHA-256 hashes.
+- OAuth uses PKCE with `S256`. Refresh tokens rotate on every use and can be revoked at any time. See [Authentication](/mcp-server/authentication).
+- Each key or token has its own rate limit.
+
+## Permissions
+
+Tools check the permission they need. A key or token without `write` cannot create, update or delete records. Tools that act for one person, such as LinkedIn and sender mailbox tools, refuse a workspace API key.
+
+## Sending and deleting
+
+- Delete tools require an explicit `confirm` flag. Most archive by default and purge only when asked.
+- `start_campaign` is the only way to send a campaign. It needs the confirm flag and a workspace setting: a workspace admin must enable **Allow AI assistants to send outbound** under **Settings**, **API & Integrations**, **Connected AI Assistants**. Without it, the call is refused.
+- `create_campaign` always creates a draft.
+- The LinkedIn send tools also require a confirm flag.
+
+## Audit trail
+
+The server writes one log row per request with the tool name, outcome, timing, IP address and user agent, attributed to the key or token used.
+
+## Not covered here
+
+[NEEDS: certifications, penetration testing, data retention for MCP request logs and the data location of the MCP server, from the LeadLex security team]
+
+To report a vulnerability or ask a security question, write to [support@leadlex.com](mailto:support@leadlex.com).

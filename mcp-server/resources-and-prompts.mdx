@@ -1,0 +1,33 @@
+---
+title: "Resources and prompts"
+description: "The read-only resources and ready-made prompts the LeadLex MCP server provides."
+---
+
+Besides tools, the server offers resources and prompts. Whether you see them depends on your client: some show prompts as one-click actions, some let you attach resources to a chat.
+
+## Resources
+
+Resources are read-only and scoped to your workspace. They let an assistant load a record into context without chaining several search calls.
+
+| URI | Contents |
+| --- | --- |
+| `leadlex://workspace/snapshot` | Pipeline summary, open task counts and the latest activity. A good starting point for "what is going on?" |
+| `leadlex://workspace/pipelines` | Your pipelines and their stages |
+| `leadlex://contact/{id}` | One contact |
+| `leadlex://deal/{id}` | One deal (matter) |
+| `leadlex://company/{id}` | One client company |
+
+## Prompts
+
+Each prompt expands into a structured request that tells the assistant which resources and tools to use.
+
+| Prompt | Arguments | Purpose |
+| --- | --- | --- |
+| `weekly_pipeline_review` | `weeks_lookback`, `focus_owner` (optional) | End-of-week pipeline triage with stale deals and suggested next steps |
+| `draft_followup_email` | `contact_id`, `context`, `tone` | Draft a follow-up email to a contact |
+| `prepare_for_meeting` | `meeting_id` | Brief before a meeting |
+| `stale_deals_outreach` | `weeks_inactive`, `max_deals` (optional) | Find deals that went quiet and plan outreach |
+| `quarterly_business_review` | `client_company_id`, `quarter` | Review of one client relationship |
+| `new_contact_research` | `contact_id` | Research a new contact |
+
+Arguments marked optional in the server can be left out. Check your client's prompt picker for the exact form.

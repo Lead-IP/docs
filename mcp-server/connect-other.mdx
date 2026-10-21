@@ -1,0 +1,49 @@
+---
+title: "Connect other clients"
+description: "Generic setup for any MCP client that supports remote streamable HTTP servers."
+---
+
+Any client that supports remote MCP servers over streamable HTTP can connect to LeadLex.
+
+| Setting | Value |
+| --- | --- |
+| Server URL | `https://mcp.leadlex.com/mcp` |
+| Transport | Streamable HTTP |
+| Authentication | OAuth 2.1 with dynamic client registration, or the `X-API-Key` header |
+
+## OAuth
+
+If your client supports OAuth for MCP, give it the server URL only. It discovers everything else from the server's metadata. See [Authentication](/mcp-server/authentication#discovery).
+
+## API key
+
+If your client lets you set custom headers, use a workspace API key:
+
+```json
+{
+  "mcpServers": {
+    "leadlex": {
+      "type": "http",
+      "url": "https://mcp.leadlex.com/mcp",
+      "headers": {
+        "X-API-Key": "wbk_your_api_key"
+      }
+    }
+  }
+}
+```
+
+The exact field names (`type`, `url`, `headers`, `serverUrl`) differ between clients. Check your client's documentation for its spelling.
+
+## Test the connection with curl
+
+An unauthenticated request returns `401` and a `WWW-Authenticate` header that points to the OAuth metadata:
+
+```bash
+curl -i -X POST https://mcp.leadlex.com/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+To send the request with a workspace API key, add `-H "X-API-Key: wbk_your_api_key"`.

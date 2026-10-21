@@ -1,0 +1,59 @@
+---
+title: "LeadLex MCP server"
+description: "Connect Claude, ChatGPT, Cursor and other AI assistants to your LeadLex workspace."
+---
+
+The LeadLex MCP server lets an AI assistant work inside your LeadLex workspace. You ask in plain language. The assistant searches your contacts, creates a deal, books a follow-up task or drafts a campaign, and it does so with your own CRM data.
+
+MCP (Model Context Protocol) is the open standard that AI assistants use to talk to outside tools. LeadLex runs a remote MCP server, so there is nothing to install.
+
+## Endpoint
+
+```
+https://mcp.leadlex.com/mcp
+```
+
+The server speaks streamable HTTP. You can sign in with OAuth 2.1 or with a workspace API key. See [Authentication](/mcp-server/authentication).
+
+## What the server exposes
+
+<CardGroup cols={3}>
+  <Card title="99 tools" icon="wrench" href="/mcp-server/tools">
+    Contacts, companies, deals, tasks, meetings, notes, email, campaigns, prospecting, reports and more.
+  </Card>
+  <Card title="5 resources" icon="database" href="/mcp-server/resources-and-prompts">
+    Read-only records the assistant can load on demand, such as a workspace snapshot.
+  </Card>
+  <Card title="6 prompts" icon="message" href="/mcp-server/resources-and-prompts">
+    Ready-made workflows such as a weekly pipeline review.
+  </Card>
+</CardGroup>
+
+## Connect your assistant
+
+<CardGroup cols={2}>
+  <Card title="Claude" icon="message-bot" href="/mcp-server/connect-claude">
+    Claude.ai, Claude Desktop and Claude Code.
+  </Card>
+  <Card title="ChatGPT" icon="comments" href="/mcp-server/connect-chatgpt">
+    Add LeadLex as a custom connector.
+  </Card>
+  <Card title="Cursor" icon="code" href="/mcp-server/connect-cursor">
+    Add LeadLex to your Cursor MCP config.
+  </Card>
+  <Card title="Other clients" icon="plug" href="/mcp-server/connect-other">
+    Any client that supports remote streamable HTTP servers.
+  </Card>
+</CardGroup>
+
+## How it relates to the REST API
+
+The MCP server and the [REST API](/api-reference/contacts/list) work on the same workspace data. Use MCP when an AI assistant is the user. Use the REST API when your own code is the client.
+
+## Workspace isolation
+
+Every call runs inside the workspace of the account that signed in. You never pass a workspace or company id, and the tools do not accept one. Read more on the [Security](/mcp-server/security) page.
+
+## Availability
+
+[NEEDS: which LeadLex plans include MCP access]

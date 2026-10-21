@@ -1,0 +1,41 @@
+---
+title: "Connect Cursor"
+description: "Add LeadLex to Cursor through its MCP configuration."
+---
+
+Add LeadLex to `~/.cursor/mcp.json` for all projects, or to `.cursor/mcp.json` inside a single project.
+
+## OAuth
+
+```json
+{
+  "mcpServers": {
+    "leadlex": {
+      "url": "https://mcp.leadlex.com/mcp"
+    }
+  }
+}
+```
+
+Cursor starts the sign-in the first time it needs the server. Approve the LeadLex consent screen in your browser.
+
+## API key
+
+```json
+{
+  "mcpServers": {
+    "leadlex": {
+      "url": "https://mcp.leadlex.com/mcp",
+      "headers": {
+        "X-API-Key": "wbk_your_api_key"
+      }
+    }
+  }
+}
+```
+
+<Warning>
+  Do not commit a project `.cursor/mcp.json` that contains a real API key. Keep keys in your user-level config or in an environment variable.
+</Warning>
+
+Create a key under **Settings** then **API & Integrations** in the LeadLex dashboard. See [Authentication](/mcp-server/authentication).

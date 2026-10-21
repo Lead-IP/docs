@@ -1,0 +1,54 @@
+---
+title: "Connect Claude"
+description: "Add LeadLex to Claude.ai, Claude Desktop or Claude Code."
+---
+
+All three options use the same server URL:
+
+```
+https://mcp.leadlex.com/mcp
+```
+
+## Claude.ai and Claude Desktop
+
+<Steps>
+  <Step title="Open connectors">
+    In Claude, open **Settings** and go to **Connectors**.
+  </Step>
+  <Step title="Add a custom connector">
+    Choose **Add custom connector**. Name it `LeadLex` and paste the server URL above.
+  </Step>
+  <Step title="Sign in to LeadLex">
+    Claude opens a LeadLex sign-in and consent screen. Approve the access. Claude registers itself with LeadLex automatically, so you do not need a client id or secret.
+  </Step>
+  <Step title="Try it">
+    Start a chat and ask: "What is in my pipeline this week?"
+  </Step>
+</Steps>
+
+<Note>
+  Menu names change between Claude releases. If you do not see **Add custom connector**, check whether your Claude plan or workspace admin allows custom connectors. [NEEDS: confirm which Claude plans support custom connectors]
+</Note>
+
+## Claude Code
+
+Add the server with one command:
+
+```bash
+claude mcp add --transport http leadlex https://mcp.leadlex.com/mcp
+```
+
+Then run `/mcp` inside Claude Code, select **leadlex** and follow the sign-in.
+
+To use a workspace API key instead of OAuth:
+
+```bash
+claude mcp add --transport http leadlex https://mcp.leadlex.com/mcp \
+  --header "X-API-Key: wbk_your_api_key"
+```
+
+Some tools need a signed-in user and refuse an API key. See [Authentication](/mcp-server/authentication#oauth-only-tools).
+
+## Disconnect
+
+Remove the connector in Claude. To revoke the grant on the LeadLex side, open **Settings**, then **API & Integrations**, then **Connected AI Assistants** in the LeadLex dashboard.

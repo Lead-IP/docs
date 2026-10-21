@@ -1,0 +1,65 @@
+---
+title: "Examples"
+description: "Real requests you can give your assistant, and the LeadLex tools it uses."
+---
+
+You do not call tools yourself. You describe what you want, and the assistant picks the tools. The names below show what happens behind the scenes. People and firms in these examples are made up.
+
+## Capture a meeting in one go
+
+> Just met with Alex Tan at Banana Legal. Trademark pilot, follow up next week.
+
+The assistant calls `upsert_crm_bundle` once. It creates or updates the company and contact, then adds the meeting, a note, a deal and a follow-up task, all linked together in one transaction. Companies are matched by name and contacts by email, so repeating the request does not create duplicates.
+
+## Find and update records
+
+| You say | Tools |
+| --- | --- |
+| "Search my contacts for Sarah" | `search_contacts` |
+| "Tag Sarah as VIP" | `add_contact_tags` |
+| "What tags do I use?" | `list_tags`, then `search_contacts` |
+| "Create a task to call Anna Mueller tomorrow" | `create_task` |
+| "When am I free for a 30 minute call this week?" | `find_free_slot` |
+| "Move the Roche meeting to Friday at 11" | `update_meeting` |
+
+## Work the pipeline
+
+> What is in my pipeline, and which deals have gone quiet?
+
+The assistant uses `search_deals`, `report_pipeline_summary` and `report_stale_deals`. To change a deal, it first calls `list_pipelines` so it uses your exact stage names, then `move_deal_stage`.
+
+## Import contacts
+
+> Import these 80 contacts.
+
+For pasted rows the assistant uses `bulk_create_contacts`. For a CSV or XLSX file it uses `import_contacts_from_file`, and `get_import_job` shows what happened afterwards.
+
+## Source new prospects
+
+> Find 20 patent attorneys in pharma.
+
+The assistant calls `find_prospects` and shows you the people. Revealing emails spends credits, so it waits until you confirm who you want, then calls `reveal_prospect_emails` and `save_prospects`.
+
+## Run a campaign
+
+> Create a follow-up campaign called Q3-Roche and add the Roche prospects.
+
+The assistant calls `create_campaign`, which always creates a draft, then `add_contacts_to_campaign`. Sending needs a clear instruction from you, a workspace setting and a confirmation flag. See [Security](/mcp-server/security#sending-and-deleting).
+
+## Read email
+
+> Did Anna reply to my pitch?
+
+The assistant calls `search_emails` and, if needed, `get_email_thread`.
+
+## Look up patent activity
+
+> What patent moves happened for my clients this month?
+
+The assistant calls `ip_moves` and `get_ip_profile` for companies in your workspace that are linked to the IP register.
+
+## Remember preferences
+
+> Remember that I prefer short emails with no greeting.
+
+The assistant calls `remember_fact` and uses `recall_facts` in later conversations.
