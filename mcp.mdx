@@ -1,0 +1,81 @@
+---
+title: "Connect LeadLex to an AI assistant"
+description: "Use the LeadLex MCP connector to work with your CRM from Claude, ChatGPT, or another MCP client."
+---
+
+Connect an AI assistant to your LeadLex workspace to find contacts, review deals, and manage tasks, meetings, and notes.
+
+## Before you connect
+
+You need a LeadLex account with access to a workspace. Your assistant must support remote MCP servers and OAuth authentication. Availability of custom connectors depends on your assistant's plan and administrator settings.
+
+**MCP server:** `https://mcp.leadlex.com/mcp`
+
+The server also accepts MCP requests at `https://mcp.leadlex.com` for clients that use the bare server URL.
+
+## Connect Claude
+
+1. Open Claude's **Settings → Connectors** and add a custom connector.
+2. Name it **LeadLex** and enter `https://mcp.leadlex.com/mcp` as the server URL.
+3. Connect the server. Sign in to LeadLex when the authorization page opens.
+4. Check the workspace and requested permissions before you authorize access.
+5. Return to Claude and ask it to search your LeadLex contacts.
+
+## Connect ChatGPT
+
+If custom MCP connections are enabled for your account, open ChatGPT's app or connector settings and create a connection to `https://mcp.leadlex.com/mcp`. Sign in through LeadLex's OAuth flow and review the permissions before authorizing access.
+
+The settings available to you depend on your ChatGPT plan and workspace policy. This custom connection does not require LeadLex to be listed in the public directory.
+
+## Other MCP clients
+
+Use the client's remote HTTP transport and OAuth flow. A portable MCP configuration is:
+
+```json
+{
+  "mcpServers": {
+    "leadlex": {
+      "type": "streamable-http",
+      "url": "https://mcp.leadlex.com/mcp"
+    }
+  }
+}
+```
+
+Your client may use a different configuration format. Do not put access tokens or workspace API keys in a configuration you share publicly.
+
+## Permissions
+
+The OAuth consent screen describes the requested access:
+
+| Scope | Access |
+| --- | --- |
+| `read` | Read workspace CRM data. |
+| `write` | Create or change workspace records through supported tools. |
+| `lexi` | Run supported Lexi AI tasks on your behalf. |
+
+Some tools require additional workspace permissions, a connected email or LinkedIn account, or provider credits. Check the tool's description before actions that send messages, delete records, or spend credits. Authorizing a connection does not itself send a campaign or message.
+
+## Try a workflow
+
+- "Find contacts at Acme in my LeadLex workspace."
+- "Show my open deals and their next follow-up dates."
+- "Show my tasks due this week."
+- "Create a task called Review meeting notes, due tomorrow."
+
+The connector works with data available to your authenticated workspace. If a search returns no result, narrow the query or check the record and your access in LeadLex.
+
+## Revoke access
+
+In LeadLex, open **Settings → API & Integrations → Connected AI Assistants** and revoke the connection. Remove the connector from your assistant's settings if you no longer need it.
+
+## Help and policies
+
+Contact [support@leadlex.com](mailto:support@leadlex.com) for connection help. Never send passwords, access tokens, or client records in a support request unless a suitable secure channel has been arranged.
+
+- [LeadLex](https://www.leadlex.com)
+- [Privacy policy](https://www.leadlex.com/privacy)
+- [Terms of service](https://www.leadlex.com/terms)
+- [OAuth discovery metadata](https://mcp.leadlex.com/.well-known/oauth-authorization-server)
+
+LeadLex is provided by Lead IP GmbH.
