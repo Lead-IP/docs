@@ -17,7 +17,7 @@ Nothing is written onto the record. New values for blank fields become a pending
 ## Providers and licensing
 
 - A-Leads supplies the verified email (verified only), the phone (opt-in), LinkedIn, job title and company.
-- Apollo's license does not let LeadLex serve its data to your workspace on LeadLex's key. Without your own Apollo key, Apollo appears in `providers` as `{ "name": "apollo", "outcome": "skipped", "reason": "resale_not_allowed" }`. It is never called and costs nothing. Storing your own Apollo key fixes this.
+- Apollo's license does not let LeadLex serve its data to customer workspaces, so Apollo appears in `providers` as `{ "name": "apollo", "outcome": "skipped", "reason": "resale_not_allowed" }`. It is never called and costs nothing.
 
 ## Billing
 
@@ -26,19 +26,12 @@ Phone is opt-in and off by default. A delivered phone costs 10 credits. Otherwis
 | Outcome | Credits |
 |---------|---------|
 | `proposed` or `found`, no phone delivered | 1 |
-| `proposed` or `found` with a phone delivered on LeadLex's key | 10 |
+| `proposed` or `found` with a phone | 10 |
 | Phone asked for but not found, other fields delivered | 1 |
-| Every delivered value came from your own keys (`source: "byok"`) | 0 |
-| A platform phone next to BYOK values | 10 |
 | `nothing_new`, `no_match`, any error, or providers skipped as `resale_not_allowed` | 0 |
 
-Credits are reserved first, then settled. Before any provider runs, the request reserves the most it can cost (10 with phone, otherwise 1), and only for fields that a provider running on LeadLex's key could supply. When only your own keys or skipped providers could supply the fields, nothing is reserved. If the balance is too low, the call returns `402 insufficient_credits` before any provider is called. The unused part is refunded once the result is known, and everything is refunded on failure. `credits_used` in the response is the final amount. Allow up to 60 seconds for a response. Providers share a 40 second budget.
+Credits are reserved first, then settled. Before any provider runs, the request reserves the most it can cost (10 with phone, otherwise 1), and only for fields that a provider could supply. When only skipped providers could supply the fields, nothing is reserved. If the balance is too low, the call returns `402 insufficient_credits` before any provider is called. The unused part is refunded once the result is known, and everything is refunded on failure. `credits_used` in the response is the final amount. Allow up to 60 seconds for a response. Providers share a 40 second budget.
 
-## Bring your own provider key
-
-Workspace admins can store their own Apollo or A-Leads key in Settings → API & Data, under "Your own data provider keys". The key is write-only: after saving, the app shows only "Set · ends in XXXX" and the date, never the key itself. When a key is stored, that provider runs on it for this workspace.
-
-Values that come from your own key return with `source: "byok"` and a `provider` field that names the vendor. They cost 0 credits. In `providers`, a step that ran on your key carries `byok: true`.
 
 ## Request
 
@@ -102,7 +95,7 @@ Content-Type: application/json
       </Expandable>
     </ResponseField>
     <ResponseField name="fields" type="object">
-      A map from field name to `{ value, source, provider? }`. `source` is the provider name on LeadLex's key (`apollo`, `aleads`), or `byok` when the provider ran on your workspace's own key. In that case `provider` names the vendor.
+      A map from field name to `{ value, source }`. `source` is the provider that supplied the value (`apollo` or `aleads`).
     </ResponseField>
     <ResponseField name="skipped" type="object[]">
       <Expandable title="properties">
@@ -118,7 +111,6 @@ Content-Type: application/json
         <ResponseField name="reason" type="string">Why the step ended as it did. For `skipped`: `nothing_to_supply`, `out_of_time` or `resale_not_allowed`</ResponseField>
         <ResponseField name="code" type="string">Error code, when the outcome is `error`</ResponseField>
         <ResponseField name="warning" type="string">Optional warning from the provider step</ResponseField>
-        <ResponseField name="byok" type="boolean">`true` when the provider ran on your workspace's own key</ResponseField>
       </Expandable>
     </ResponseField>
     <ResponseField name="match" type="object | null">Who the providers matched: `name`, `title`, `company`, `location`, `linkedin_url`, `photo_url` and `reasons`. `null` when nothing matched</ResponseField>

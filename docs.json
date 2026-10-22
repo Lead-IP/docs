@@ -270,7 +270,6 @@
             "group": "Enrichment",
             "pages": [
               "api-reference/enrich/contact",
-              "api-reference/enrich/company",
               "api-reference/enrich/business-card"
             ]
           },
