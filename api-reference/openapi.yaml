@@ -1,4 +1,4 @@
-# Copy of lovable-temp-old/openapi.yaml as of Lead-IP/lovable-temp-old#763. Re-copy when the spec changes.
+# Copy of lovable-temp-old/openapi.yaml as of Lead-IP/lovable-temp-old#763 (final). Re-copy when the spec changes.
 openapi: 3.1.0
 info:
   title: LeadLex API
@@ -557,7 +557,7 @@ components:
           minItems: 1
           uniqueItems: true
           items: { $ref: "#/components/schemas/ContactEnrichField" }
-          description: "Default: all except `phone` (phone is a separate, costlier lookup; ask for it explicitly)."
+          description: "Default: all except `phone`. Phone is opt-in: list it here to look it up; a delivered phone makes the request cost 10 credits instead of 1."
         create:
           type: boolean
           default: false
@@ -595,16 +595,33 @@ components:
       required: [value, source]
       properties:
         value: { type: string }
-        source: { type: string, description: "Provider that supplied the value, e.g. `apollo` or `aleads`.", example: apollo }
+        source:
+          type: string
+          description: |
+            Provider that supplied the value on LeadLex's key, e.g. `apollo` or `aleads`; or `byok`
+            when it came from a provider running on your workspace's own key (then see `provider`).
+          example: apollo
+        provider:
+          type: string
+          description: "Only with `source: byok`: the provider that ran on your own key."
+          example: apollo
     EnrichProviderStep:
       type: object
       required: [name, outcome]
-      description: One provider in the cascade, in the order it ran.
+      description: One provider in the cascade, in the order it ran (or was skipped).
       properties:
         name: { type: string, example: apollo }
         outcome: { type: string, enum: [match, no_match, error, skipped] }
         fields: { type: array, items: { type: string }, description: "outcome=match: the fields this provider supplied." }
-        reason: { type: string, description: "outcome=no_match or skipped, e.g. `not_found`, `ambiguous`, `nothing_to_supply`, `out_of_time`." }
+        reason:
+          type: string
+          description: |
+            outcome=no_match, e.g. `not_found`, `ambiguous`. outcome=skipped: `nothing_to_supply`
+            (it offers none of the missing fields), `out_of_time` (the 40 s budget ran out), or
+            `resale_not_allowed` (its license does not let LeadLex serve its data to your workspace
+            on LeadLex's key; store your own key for it in Settings → API & Data to use it).
+            A skipped provider is not called and costs nothing.
+        byok: { type: boolean, enum: [true], description: "Present when this provider ran (or would have run) on your workspace's own key." }
         code: { type: string, description: "outcome=error, e.g. `apollo_timeout`." }
         warning: { type: string, description: "outcome=match with a failed sub-lookup, e.g. `find_email_timeout`." }
     RecordEnrichResult:
@@ -615,8 +632,9 @@ components:
           type: string
           enum: [proposed, found, nothing_new, no_match]
           description: |
-            `proposed`: new values are waiting in the Enrich review queue (1 credit).
-            `found`: no record and `create` was false; the values are returned only (1 credit).
+            `proposed`: new values are waiting in the Enrich review queue (1 credit; 10 with a phone).
+            `found`: no record and `create` was false; the values are returned only (same price).
+            Values from your own keys (`source: byok`) cost no credits.
             `nothing_new`: every requested field is already filled, or nothing found was new (0 credits).
             `no_match`: no provider found the person or company (0 credits).
         record:
@@ -635,9 +653,9 @@ components:
             status: { type: string, enum: [pending] }
         fields:
           type: object
-          description: "Proposed (or, for `found`, returned) values, keyed by CRM field, each with its source provider."
+          description: "Proposed (or, for `found`, returned) values, keyed by CRM field, each with its source."
           additionalProperties: { $ref: "#/components/schemas/EnrichedValue" }
-          example: { job_title: { value: General Counsel, source: apollo }, email: { value: anna.roth@acme.com, source: aleads } }
+          example: { job_title: { value: General Counsel, source: byok, provider: apollo }, email: { value: anna.roth@acme.com, source: aleads } }
         skipped:
           type: array
           items:
@@ -663,7 +681,11 @@ components:
             linkedin_url: { type: [string, "null"] }
             photo_url: { type: [string, "null"] }
             reasons: { type: array, items: { type: string } }
-        credits_used: { type: integer, enum: [0, 1] }
+        credits_used:
+          type: integer
+          minimum: 0
+          maximum: 10
+          description: "Credits this request used: 0, 1, or 10 when a phone was delivered on LeadLex's key. See the billing table on the route."
     ProspectRevealResult:
       allOf:
         - { $ref: "#/components/schemas/EmailRevealResult" }
@@ -724,7 +746,7 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
     InsufficientCredits:
-      description: "Not enough credits (`insufficient_credits`). Nothing was charged."
+      description: "Not enough credits (`insufficient_credits`). Nothing was charged. Record enrichment checks the most the request can cost (10 with phone, else 1)."
       headers:
         X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
       content:
@@ -4219,15 +4241,37 @@ paths:
         is asked only for the fields still missing; the first provider to supply a field wins it,
         and each value reports its `source`. A provider that fails or times out is skipped.
 
+        **Your own provider keys (BYOK).** A workspace admin can store the workspace's own Apollo or
+        A-Leads key in Settings → API & Data. That provider then runs on your key: its values come
+        back with `source: byok` and `provider`, and cost no LeadLex credits. Keys are write-only.
+
+        **Licensing.** Some providers' terms do not let LeadLex serve their data to customer
+        workspaces on LeadLex's key (today: Apollo). Without your own key such a provider is not
+        called; it appears in `providers` as `skipped` with reason `resale_not_allowed`, and is
+        not charged.
+
         **Nothing is written onto the contact.** New values become a pending proposal in the
         Enrich review queue; a person approves them in LeadLex. Only blank fields are proposed.
         Contacts are matched in this workspace only: not archived, not merged, not private to
         another member. An `email` matching several contacts answers 409.
 
-        Billing: **1 credit when at least one new field is proposed** (or returned, for `found`).
-        No match, nothing new, and every error below cost nothing. Send an `Idempotency-Key` to
-        retry safely: a repeat with the same key returns the stored response and is not charged
-        again. Allow up to 60 seconds for a response.
+        Billing (credits per request, never summed per field):
+
+        | Outcome | Credits |
+        |---|---|
+        | `proposed` or `found`, no phone delivered | 1 |
+        | `proposed` or `found` with a phone (phone asked for in `fields`) | 10 (the app's phone price; not 11) |
+        | phone asked for but none found, other fields delivered | 1 |
+        | every delivered value from your own keys (`source: byok`) | 0 |
+        | `nothing_new`, `no_match`, any error | 0 |
+
+        Phone is **opt-in** and off by default: it is looked up only when `fields` contains `phone`.
+        The request first reserves the most it can cost (10 with phone, else 1; only for fields a
+        provider that will actually run on LeadLex's key could supply), so a workspace needs that
+        balance or gets 402 before any provider runs; the difference is refunded as soon as the result is
+        known, and everything is refunded on any failure. `credits_used` is the final amount.
+        Send an `Idempotency-Key` to retry safely: a repeat with the same key returns the stored
+        response and is not charged again. Allow up to 60 seconds for a response.
       tags: [Enrichment]
       x-permission-scope: enrichment:write
       security: [{ bearerAuth: [] }]
@@ -4281,7 +4325,11 @@ paths:
 
         **Nothing is written onto the company.** New values for blank fields become a pending
         proposal in the company review queue. Billing, idempotency and timing as for
-        `POST /v1/enrich/contact`: 1 credit when at least one new field is proposed (or returned).
+        `POST /v1/enrich/contact`: 1 credit when at least one new field is proposed (or returned);
+        no company field is priced higher, so the reservation is at most 1. Your own keys (BYOK)
+        and the `resale_not_allowed` skip work as on that route. Apollo is the only company
+        provider today and is not served on LeadLex's key, so without your own Apollo key this
+        route answers `no_match` (free) with Apollo skipped as `resale_not_allowed`.
       tags: [Enrichment]
       x-permission-scope: enrichment:write
       security: [{ bearerAuth: [] }]

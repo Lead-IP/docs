@@ -18,6 +18,10 @@ rss: true
 
   `POST /v1/enrich/contact` and `POST /v1/enrich/company` are back. They run on verified data providers and send results to review instead of writing them directly.
 
+  ## Bring your own provider key
+
+  Workspace admins can store their own Apollo or A-Leads key in Settings → API & Data. The key is write-only and the app shows only "ends in XXXX". Values that come from it return with `source: "byok"` and a `provider` field, and cost 0 credits. Without a workspace Apollo key, Apollo is skipped as `resale_not_allowed`, is never called and is free. Company enrichment returns `no_match` unless the workspace stores its own Apollo key. A delivered phone costs 10 credits and is off by default. The API key dialog now has an "Enrichment" permission group.
+
   ## Rate limit
 
   The API rate limit is 500 calls a day per key.
