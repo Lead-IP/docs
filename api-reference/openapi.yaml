@@ -1,5 +1,4 @@
-# Copy of lovable-temp-old/openapi.yaml. Only change: `servers` now lists the base URL that answers
-# (data.leadlex.com/v1/... returns 404; /functions/v1/api-gateway/v1/... returns 401 without a key).
+# Copy of lovable-temp-old/openapi.yaml as of Lead-IP/lovable-temp-old#745. Re-copy when the spec changes.
 openapi: 3.1.0
 info:
   title: LeadLex API
@@ -54,7 +53,7 @@ tags:
   - name: Events
     description: Webhook event catalog.
   - name: Email
-    description: Email send, threads, enrichment.
+    description: Email send, threads, sync and correspondents.
   - name: Calendar
     description: Calendar events and sync.
   - name: Channels
@@ -3618,44 +3617,6 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "429": { $ref: "#/components/responses/RateLimited" }
-  /v1/email/enrich:
-    post:
-      operationId: enrichEmail
-      summary: Enrich email
-      description: Enrich an email address with contact and company data.
-      tags: [Email]
-      x-permission-scope: enrichment:read
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [email]
-              properties:
-                email: { type: string, format: email }
-      responses:
-        "200":
-          description: OK
-          headers:
-            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
-            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
-            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
-            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  contact: { $ref: "#/components/schemas/Contact" }
-                  company: { $ref: "#/components/schemas/Company" }
-        "400": { $ref: "#/components/responses/ValidationError" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "429": { $ref: "#/components/responses/RateLimited" }
   /v1/email/correspondents:
     get:
       operationId: listEmailCorrespondents
@@ -3862,7 +3823,7 @@ paths:
     post:
       operationId: enrichContact
       summary: Enrich contact
-      description: Enrich a contact with external data.
+      description: Enrich an existing contact with external data. Identify it by `contact_id`.
       tags: [Enrichment]
       x-permission-scope: enrichment:read
       security: [{ bearerAuth: [] }]
@@ -3874,9 +3835,9 @@ paths:
           application/json:
             schema:
               type: object
+              required: [contact_id]
               properties:
                 contact_id: { type: string, format: uuid }
-                email: { type: string, format: email }
       responses:
         "200":
           description: OK
@@ -3896,7 +3857,7 @@ paths:
     post:
       operationId: enrichCompany
       summary: Enrich company
-      description: Enrich a company with external data.
+      description: Enrich an existing client company with external data. Identify it by `company_id`.
       tags: [Enrichment]
       x-permission-scope: enrichment:read
       security: [{ bearerAuth: [] }]
@@ -3908,9 +3869,9 @@ paths:
           application/json:
             schema:
               type: object
+              required: [company_id]
               properties:
-                company_id: { type: string, format: uuid }
-                domain: { type: string }
+                company_id: { type: string }
       responses:
         "200":
           description: OK

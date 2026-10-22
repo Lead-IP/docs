@@ -1,7 +1,7 @@
 ---
 title: "Enrich Company"
 api: "POST /v1/enrich/company"
-description: "Populate firmographic data for a company record from domain, name, or existing company ID"
+description: "Populate firmographic data for an existing company record"
 ---
 
 <Warning>
@@ -23,12 +23,8 @@ Content-Type: application/json
 
 ### Body Parameters
 
-<ParamField body="company_id" type="string">
-  UUID of an existing company record. Supply either `company_id` or `domain`.
-</ParamField>
-
-<ParamField body="domain" type="string">
-  Canonical company domain (e.g. `acme.com`). Used when you do not yet have a company record. The API will create or return the matching company.
+<ParamField body="company_id" type="string" required>
+  UUID of the company to enrich. Create the company first if you only have a domain.
 </ParamField>
 
 <ParamField body="fields" type="array">
@@ -60,7 +56,7 @@ curl -X POST \
   https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/company \
   -H "Authorization: Bearer wbk_your_api_key_here" \
   -H "Content-Type: application/json" \
-  -d '{"domain": "acme.com"}'
+  -d '{"company_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7"}'
 ```
 
 ```python Python
@@ -75,7 +71,7 @@ r = requests.post(
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
     },
-    json={"domain": "acme.com"},
+    json={"company_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7"},
 )
 print(r.json()["data"]["company"]["name"])
 ```
@@ -89,7 +85,7 @@ const res = await fetch(
       'Authorization': 'Bearer wbk_your_api_key_here',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ domain: 'acme.com' }),
+    body: JSON.stringify({ company_id: '7c9e6679-7425-40de-944b-e07fc1f90ae7' }),
   }
 );
 const { data } = await res.json();
@@ -125,7 +121,7 @@ console.log(data.company.name);
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Neither `company_id` nor `domain` provided |
+| 400 | `validation_error` | `company_id` missing |
 | 401 | `invalid_key` | Invalid or expired API key |
 | 402 | `insufficient_credits` | Workspace credit balance is exhausted |
 | 403 | `insufficient_permissions` | Missing `write:enrich` permission |

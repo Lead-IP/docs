@@ -246,7 +246,6 @@
               "api-reference/email/threads-list",
               "api-reference/email/threads-get",
               "api-reference/email/sync",
-              "api-reference/email/enrich",
               "api-reference/email/correspondents"
             ]
           },
@@ -271,7 +270,6 @@
             "pages": [
               "api-reference/enrich/contact",
               "api-reference/enrich/company",
-              "api-reference/enrich/email",
               "api-reference/enrich/business-card"
             ]
           },
