@@ -96,7 +96,7 @@ Content-Type: application/json
     <ResponseField name="providers" type="object[]">
       <Expandable title="properties">
         <ResponseField name="name" type="string">Provider name</ResponseField>
-        <ResponseField name="outcome" type="string">What this provider returned</ResponseField>
+        <ResponseField name="outcome" type="string">One of `match`, `no_match`, `error` or `skipped`.</ResponseField>
         <ResponseField name="fields" type="string[]">Fields this provider supplied</ResponseField>
       </Expandable>
     </ResponseField>
@@ -160,12 +160,12 @@ console.log(data.status);
     "fields": {
       "job_title": { "value": "General Counsel", "source": "apollo" },
       "linkedin_url": { "value": "https://www.linkedin.com/in/anna-roth-example", "source": "apollo" },
-      "phone": { "value": "+49 30 1234567", "source": "a-leads" }
+      "phone": { "value": "+49 30 1234567", "source": "aleads" }
     },
     "skipped": [],
     "providers": [
-      { "name": "apollo", "outcome": "found", "fields": ["job_title", "linkedin_url"] },
-      { "name": "a-leads", "outcome": "found", "fields": ["phone"] }
+      { "name": "apollo", "outcome": "match", "fields": ["job_title", "linkedin_url"] },
+      { "name": "aleads", "outcome": "match", "fields": ["phone"] }
     ],
     "match": {
       "name": "Anna Roth",

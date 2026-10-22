@@ -88,7 +88,7 @@ Content-Type: application/json
     <ResponseField name="providers" type="object[]">
       <Expandable title="properties">
         <ResponseField name="name" type="string">Provider name</ResponseField>
-        <ResponseField name="outcome" type="string">What this provider returned</ResponseField>
+        <ResponseField name="outcome" type="string">One of `match`, `no_match`, `error` or `skipped`.</ResponseField>
         <ResponseField name="fields" type="string[]">Fields this provider supplied</ResponseField>
       </Expandable>
     </ResponseField>
@@ -158,7 +158,7 @@ console.log(data.status);
       { "field": "website", "reason": "already_set" }
     ],
     "providers": [
-      { "name": "apollo", "outcome": "found", "fields": ["industry", "size", "linkedin_url"] }
+      { "name": "apollo", "outcome": "match", "fields": ["industry", "size", "linkedin_url"] }
     ],
     "match": {
       "name": "Acme",
