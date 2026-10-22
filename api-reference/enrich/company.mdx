@@ -215,13 +215,13 @@ Errors use the standard error envelope, `{ "error": { "code", "message" } }`. Re
 | Status | Code | When | Credits |
 |--------|------|------|---------|
 | 400 | `validation_error` | Bad body: both or neither of `company_id` and `domain`, a bad email, domain or id, empty or unknown `fields`, `create` not a boolean, or `create` sent with an id | 0 |
-| 401 | (auth) | Missing or invalid API key | 0 |
+| 401 | `missing_auth` or `invalid_key` | Missing or invalid API key | 0 |
 | 402 | `insufficient_credits` | The balance is below the reservation ("needs up to N credits") | 0 |
 | 403 | `insufficient_permissions` | The key lacks `enrichment:write` | 0 |
 | 403 | `subscription_inactive` | The workspace subscription is not active | 0 |
 | 404 | `not_found` | `company_id` is not in this workspace, or not visible to the key owner | 0 |
 | 409 | `ambiguous_record` | Several records share that domain. `data.candidates` lists `{ id, name }` | 0 |
-| 429 | (rate limit) | The per-key daily limit was reached | 0 |
+| 429 | `rate_limited` | The per-key daily limit was reached | 0 |
 | 500 | `create_failed` | `create: true` but the record could not be created | Refunded |
 | 500 | `internal_error` | The proposal could not be saved | Refunded |
 | 502 | `upstream_error` | Every provider that was called failed. `data.providers` has the trace | Refunded |
