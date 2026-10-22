@@ -84,14 +84,7 @@ Email search also differs. With OAuth, email tools read the signed-in user's own
 
 ## Rate limits
 
-Limits apply per key or token, per minute, and depend on the workspace plan tier:
-
-| Tier | Calls per minute |
-| --- | --- |
-| Starter | 60 |
-| Growth | 300 |
-| Business | 1200 |
-| Enterprise | 6000 |
+Every OAuth connection and API key can make 60 tool calls a minute. If you need more, write to [support@leadlex.com](mailto:support@leadlex.com).
 
 Over the limit, the server returns `429` with a `Retry-After` header.
 
