@@ -1,4 +1,4 @@
-# Copy of lovable-temp-old/openapi.yaml as of Lead-IP/lovable-temp-old#745. Re-copy when the spec changes.
+# Copy of lovable-temp-old/openapi.yaml as of Lead-IP/lovable-temp-old#750. Re-copy when the spec changes.
 openapi: 3.1.0
 info:
   title: LeadLex API
@@ -59,7 +59,7 @@ tags:
   - name: Channels
     description: Multi-channel messaging (WhatsApp, SMS, etc.).
   - name: Enrichment
-    description: Contact and company enrichment.
+    description: Work-email lookup.
   - name: AI
     description: AI analysis endpoints.
   - name: Documents
@@ -491,6 +491,9 @@ components:
         company_name: { type: string }
         email: { type: string, format: email }
         linkedin_url: { type: string, format: uri }
+        member_id: { type: [string, integer], description: "Prospector search only." }
+        company_id: { type: [string, integer], description: "Prospector search only." }
+        document_id: { type: string, description: "Prospector search only. Pass to POST /v1/prospector/reveal or POST /v1/email/enrich." }
     ListResponse:
       type: object
       properties:
@@ -499,6 +502,57 @@ components:
           items: { type: object, additionalProperties: true }
         meta:
           $ref: "#/components/schemas/Meta"
+    EmailEnrichRequest:
+      type: object
+      description: |
+        Either `document_id` (from `POST /v1/prospector/search`), or the person's name
+        (`first_name` + `last_name`, or `full_name`) plus their company `domain`.
+      properties:
+        document_id: { type: string, example: "123456_7890", description: "A-Leads document id: `<member_id>_<company_id>` from prospector search." }
+        first_name: { type: string, example: Anna }
+        last_name: { type: string, example: Roth }
+        full_name: { type: string, example: Anna Roth }
+        domain: { type: string, example: acme.com, description: "Company domain; a URL is accepted and reduced to its host." }
+    EmailRevealResult:
+      type: object
+      required: [email, verification, already_in_crm, charged, refunded]
+      properties:
+        email: { type: [string, "null"], format: email, example: anna.roth@acme.com }
+        email_status: { type: [string, "null"], description: "Provider status as returned, e.g. `verified`." }
+        verification:
+          type: [string, "null"]
+          enum: [verified, unverified, null]
+          description: "`verified` only when the provider verified the address; null when no email was found."
+        already_in_crm: { type: boolean, description: "The workspace already has a contact with this email; no credit is used." }
+        charged: { type: boolean, description: "1 credit was used. Only a verified email the workspace does not already hold is charged." }
+        refunded: { type: boolean, description: "The credit taken at the start was returned (no email, unverified, already in CRM, or provider error)." }
+    EmailEnrichPerson:
+      type: object
+      properties:
+        document_id: { type: string }
+        full_name: { type: [string, "null"] }
+        job_title: { type: [string, "null"] }
+        company: { type: [string, "null"] }
+        company_domain: { type: [string, "null"] }
+        linkedin_url: { type: [string, "null"] }
+    EmailEnrichResult:
+      allOf:
+        - { $ref: "#/components/schemas/EmailRevealResult" }
+        - type: object
+          required: [credits_used, person]
+          properties:
+            credits_used: { type: integer, enum: [0, 1] }
+            person: { $ref: "#/components/schemas/EmailEnrichPerson" }
+    ProspectRevealResult:
+      allOf:
+        - { $ref: "#/components/schemas/EmailRevealResult" }
+        - type: object
+          required: [document_id, email_verified]
+          properties:
+            document_id: { type: string }
+            member_id: { type: [string, integer, "null"] }
+            company_id: { type: [string, integer, "null"] }
+            email_verified: { type: boolean, description: "Same as `verification == verified`." }
     BulkResult:
       type: object
       properties:
@@ -545,6 +599,20 @@ components:
         Retry-After:
           description: Seconds until retry allowed.
           schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    InsufficientCredits:
+      description: "Not enough credits (`insufficient_credits`). Nothing was charged."
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UpstreamError:
+      description: "The email provider failed (`upstream_error`, 502; the credit is refunded unless the message says otherwise), or the reveal did not answer in time (`upstream_timeout`, 504; the outcome is unknown, check the credit balance before retrying)."
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
@@ -2901,10 +2969,13 @@ paths:
   /v1/prospector/reveal:
     post:
       operationId: prospectorReveal
-      summary: Reveal prospect contact info
-      description: Reveal email/phone for a single prospect.
+      summary: Reveal a prospect's email
+      description: |
+        Reveals the work email for one result of `POST /v1/prospector/search`. Billed like
+        `POST /v1/email/enrich`: 1 credit only for a verified email the workspace does not
+        already hold, refunded otherwise.
       tags: [Prospector]
-      x-permission-scope: prospects:read
+      x-permission-scope: prospects:write
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
@@ -2914,9 +2985,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [prospect_id]
+              description: "`document_id`, or `member_id` with optional `company_id`, from a search result."
               properties:
-                prospect_id: { type: string }
+                document_id: { type: string }
+                member_id: { type: [string, integer] }
+                company_id: { type: [string, integer] }
       responses:
         "200":
           description: OK
@@ -2927,18 +3000,27 @@ paths:
             X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/Prospect" }
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ProspectRevealResult" }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/InsufficientCredits" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
   /v1/prospector/reveal/bulk:
     post:
       operationId: prospectorRevealBulk
-      summary: Bulk reveal prospects
-      description: Reveal contact info for multiple prospects.
+      summary: Reveal emails for several prospects
+      description: |
+        Up to 25 prospects, one billed reveal each (see `POST /v1/prospector/reveal`).
+        Duplicates are skipped. After `insufficient_credits`, three provider failures in a
+        row, or about 90 seconds, the remaining items are returned as `skipped` and are not
+        charged.
       tags: [Prospector]
-      x-permission-scope: prospects:read
+      x-permission-scope: prospects:write
       security: [{ bearerAuth: [] }]
       parameters:
         - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
@@ -2948,11 +3030,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [prospect_ids]
+              required: [prospects]
               properties:
-                prospect_ids:
+                prospects:
                   type: array
-                  items: { type: string }
+                  maxItems: 25
+                  items:
+                    oneOf:
+                      - type: string
+                        description: document_id
+                      - type: object
+                        properties:
+                          document_id: { type: string }
+                          member_id: { type: [string, integer] }
+                          company_id: { type: [string, integer] }
       responses:
         "200":
           description: OK
@@ -2963,7 +3054,39 @@ paths:
             X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/BulkResult" }
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      results:
+                        type: array
+                        items:
+                          type: object
+                          required: [document_id, status]
+                          description: "On `success` the item also carries every `EmailRevealResult` field and `email_verified`."
+                          properties:
+                            document_id: { type: [string, "null"] }
+                            status: { type: string, enum: [success, failed, skipped] }
+                            error:
+                              type: string
+                              description: "Set when status is failed or skipped: an error code, or `duplicate`, `insufficient_credits`, `upstream_unavailable`, `time_budget_exhausted`."
+                            email: { type: [string, "null"] }
+                            email_status: { type: [string, "null"] }
+                            verification: { type: [string, "null"] }
+                            already_in_crm: { type: boolean }
+                            charged: { type: boolean }
+                            refunded: { type: boolean }
+                            email_verified: { type: boolean }
+                      summary:
+                        type: object
+                        properties:
+                          total: { type: integer }
+                          succeeded: { type: integer }
+                          failed: { type: integer }
+                          skipped: { type: integer }
+                          credits_used: { type: integer }
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -3617,6 +3740,110 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/email/enrich:
+    post:
+      operationId: enrichEmail
+      summary: Find a work email
+      description: |
+        Finds a person's work email from their name and company domain, or from a
+        `document_id` returned by `POST /v1/prospector/search`.
+
+        Billing: the people search is free. Revealing the email costs **1 credit only when
+        the provider verifies an email the workspace does not already hold**; a missing,
+        unverified or already-known email is refunded (`charged: false`, `refunded: true`).
+        Send an `Idempotency-Key` to retry safely: a repeat with the same key returns the
+        stored response and is not charged again.
+
+        `POST /v1/enrich/email` is an alias with the same contract.
+      tags: [Enrichment]
+      x-permission-scope: enrichment:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailEnrichRequest" }
+            examples:
+              byName: { value: { first_name: Anna, last_name: Roth, domain: acme.com } }
+              byDocument: { value: { document_id: "123456_7890" } }
+      responses:
+        "200":
+          description: "The lookup ran. `email` is null when none was found (no credit used)."
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EmailEnrichResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/InsufficientCredits" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404":
+          description: "`person_not_found`: nobody with that name at that domain. No credit used."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: "`ambiguous_person`: several people with that name at that domain. Retry with one candidate's `document_id`. No credit used."
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: "#/components/schemas/Error" }
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          candidates:
+                            type: array
+                            items: { $ref: "#/components/schemas/EmailEnrichPerson" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
+        "503":
+          description: "`service_unavailable`: email enrichment is not configured on this server."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "504": { $ref: "#/components/responses/UpstreamError" }
+  /v1/enrich/email:
+    post:
+      operationId: enrichEmailAlias
+      summary: Find a work email (alias)
+      description: Alias of `POST /v1/email/enrich`, same request, response and billing.
+      tags: [Enrichment]
+      x-permission-scope: enrichment:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmailEnrichRequest" }
+      responses:
+        "200":
+          description: See `POST /v1/email/enrich`.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EmailEnrichResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/InsufficientCredits" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502": { $ref: "#/components/responses/UpstreamError" }
   /v1/email/correspondents:
     get:
       operationId: listEmailCorrespondents
@@ -3816,74 +4043,6 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Provider" }
                   meta: { $ref: "#/components/schemas/Meta" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "429": { $ref: "#/components/responses/RateLimited" }
-  /v1/enrich/contact:
-    post:
-      operationId: enrichContact
-      summary: Enrich contact
-      description: Enrich an existing contact with external data. Identify it by `contact_id`.
-      tags: [Enrichment]
-      x-permission-scope: enrichment:read
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [contact_id]
-              properties:
-                contact_id: { type: string, format: uuid }
-      responses:
-        "200":
-          description: OK
-          headers:
-            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
-            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
-            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
-            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Contact" }
-        "400": { $ref: "#/components/responses/ValidationError" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
-        "403": { $ref: "#/components/responses/Forbidden" }
-        "429": { $ref: "#/components/responses/RateLimited" }
-  /v1/enrich/company:
-    post:
-      operationId: enrichCompany
-      summary: Enrich company
-      description: Enrich an existing client company with external data. Identify it by `company_id`.
-      tags: [Enrichment]
-      x-permission-scope: enrichment:read
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [company_id]
-              properties:
-                company_id: { type: string }
-      responses:
-        "200":
-          description: OK
-          headers:
-            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
-            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
-            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
-            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/Company" }
-        "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "429": { $ref: "#/components/responses/RateLimited" }

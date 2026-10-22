@@ -1,40 +1,70 @@
 ---
 title: "Bulk Reveal Prospects"
 api: "POST /v1/prospector/reveal/bulk"
-description: "Reveal emails and phones for multiple prospects (max 25)"
+description: "Reveal work emails for up to 25 prospects in one call"
 ---
 
+<Warning>
+  The change dated 2026-10-22 removed phone and name fields from reveal. Each result now returns the email and its verification state only. Reveal is also billed now.
+</Warning>
+
+Required permission scope: `prospects:write`, because this call can spend credits and read-only keys cannot make it.
+
+## Billing
+
+Each prospect is billed like a single [Reveal Prospect](/api-reference/prospector/reveal): 1 credit only for a verified email that the workspace does not already have, refunded otherwise.
+
+After the first `insufficient_credits`, three provider failures in a row, or about 90 seconds, the remaining items come back with status `skipped` and are not charged. Duplicate ids also come back as `skipped`.
+
 ## Request
-
-### Body Parameters
-
-<ParamField body="prospects" type="array" required>
-  Array of prospect objects (max 25)
-  <Expandable title="Prospect object">
-    <ParamField body="member_id" type="string" required>Member ID from search</ParamField>
-    <ParamField body="company_id" type="string">Company ID from search</ParamField>
-  </Expandable>
-</ParamField>
 
 ### Headers
 
 ```
-Authorization: Bearer wbk_your_api_key_here
+Authorization: Bearer wbk_your_api_key
 Content-Type: application/json
 ```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional. A retry with the same key replays the stored response without a second charge. Send retries one after another, because two requests sent at the same time with the same key can both run.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="prospects" type="array" required>
+  Array of prospects, max 25. Each item is a `document_id` string, or an object with `document_id`, or `member_id` and an optional `company_id`.
+  <Expandable title="Prospect object">
+    <ParamField body="document_id" type="string">Document ID from search</ParamField>
+    <ParamField body="member_id" type="string">Member ID from search</ParamField>
+    <ParamField body="company_id" type="string">Company ID from search</ParamField>
+  </Expandable>
+</ParamField>
 
 ## Response
 
 <ResponseField name="data" type="object">
   <Expandable title="properties">
     <ResponseField name="results" type="array">
-      Array of reveal results, each with `member_id`, `email`, `phone`, `full_name`, `status` (`success` or `failed`)
+      <Expandable title="Result object">
+        <ResponseField name="document_id" type="string | null">Document ID of the prospect</ResponseField>
+        <ResponseField name="status" type="string">`success`, `failed` or `skipped`</ResponseField>
+        <ResponseField name="error" type="string">Set when the status is `failed` or `skipped`. For skipped items: `duplicate`, `insufficient_credits`, `upstream_unavailable` or `time_budget_exhausted`</ResponseField>
+        <ResponseField name="email" type="string | null">The work email</ResponseField>
+        <ResponseField name="email_status" type="string | null">Status reported by the provider</ResponseField>
+        <ResponseField name="verification" type="string | null">`verified`, `unverified` or `null`</ResponseField>
+        <ResponseField name="email_verified" type="boolean">Whether the email is verified</ResponseField>
+        <ResponseField name="already_in_crm" type="boolean">Whether the workspace already had this email</ResponseField>
+        <ResponseField name="charged" type="boolean">Whether a credit was charged</ResponseField>
+        <ResponseField name="refunded" type="boolean">Whether the credit was refunded</ResponseField>
+      </Expandable>
     </ResponseField>
     <ResponseField name="summary" type="object">
       <Expandable title="properties">
         <ResponseField name="total" type="integer">Total requested</ResponseField>
         <ResponseField name="succeeded" type="integer">Successful reveals</ResponseField>
         <ResponseField name="failed" type="integer">Failed reveals</ResponseField>
+        <ResponseField name="skipped" type="integer">Skipped items</ResponseField>
+        <ResponseField name="credits_used" type="integer">Credits used by the whole call</ResponseField>
       </Expandable>
     </ResponseField>
   </Expandable>
@@ -44,28 +74,20 @@ Content-Type: application/json
 
 ```bash cURL
 curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/reveal/bulk \
-  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Authorization: Bearer wbk_your_api_key" \
   -H "Content-Type: application/json" \
-  -d '{
-    "prospects": [
-      { "member_id": "12345", "company_id": "67890" },
-      { "member_id": "11111", "company_id": "22222" }
-    ]
-  }'
+  -d '{ "prospects": [ { "document_id": "123456_7890" }, { "document_id": "111111_2222" } ] }'
 ```
 
 ```python Python
 import requests
 
-API_KEY = "wbk_your_api_key_here"
+API_KEY = "wbk_your_api_key"
 BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 response = requests.post(f"{BASE_URL}/v1/prospector/reveal/bulk", headers=headers, json={
-    "prospects": [
-        {"member_id": "12345", "company_id": "67890"},
-        {"member_id": "11111", "company_id": "22222"}
-    ]
+    "prospects": [{"document_id": "123456_7890"}, {"document_id": "111111_2222"}]
 })
 print(response.json())
 ```
@@ -75,12 +97,9 @@ const response = await fetch(
   'https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/reveal/bulk',
   {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
+    headers: { 'Authorization': 'Bearer wbk_your_api_key', 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      prospects: [
-        { member_id: '12345', company_id: '67890' },
-        { member_id: '11111', company_id: '22222' }
-      ]
+      prospects: [{ document_id: '123456_7890' }, { document_id: '111111_2222' }]
     })
   }
 );
@@ -96,20 +115,23 @@ const { data } = await response.json();
   "data": {
     "results": [
       {
-        "member_id": "12345",
-        "email": "jane@acme.com",
+        "document_id": "123456_7890",
+        "status": "success",
+        "email": "anna.roth@acme.com",
+        "email_status": "valid",
+        "verification": "verified",
         "email_verified": true,
-        "phone": "+1234567890",
-        "full_name": "Jane Doe",
-        "status": "success"
+        "already_in_crm": false,
+        "charged": true,
+        "refunded": false
       },
       {
-        "member_id": "11111",
-        "status": "failed",
-        "error": "HTTP 404"
+        "document_id": "111111_2222",
+        "status": "skipped",
+        "error": "insufficient_credits"
       }
     ],
-    "summary": { "total": 2, "succeeded": 1, "failed": 1 }
+    "summary": { "total": 2, "succeeded": 1, "failed": 0, "skipped": 1, "credits_used": 1 }
   }
 }
 ```
@@ -118,5 +140,5 @@ const { data } = await response.json();
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Missing `prospects` array or exceeds 25 |
-| 403 | `insufficient_permissions` | Missing `prospects:read` permission |
+| 400 | `validation_error` | Missing `prospects` array or more than 25 items |
+| 403 | `insufficient_permissions` | Missing `prospects:write` permission |
