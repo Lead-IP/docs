@@ -1,4 +1,4 @@
-# Copy of lovable-temp-old/openapi.yaml as of Lead-IP/lovable-temp-old#750. Re-copy when the spec changes.
+# Copy of lovable-temp-old/openapi.yaml as of Lead-IP/lovable-temp-old#763. Re-copy when the spec changes.
 openapi: 3.1.0
 info:
   title: LeadLex API
@@ -543,6 +543,127 @@ components:
           properties:
             credits_used: { type: integer, enum: [0, 1] }
             person: { $ref: "#/components/schemas/EmailEnrichPerson" }
+    ContactEnrichRequest:
+      type: object
+      description: |
+        Exactly one of `contact_id` or `email`. Optional `fields` limits what is looked up
+        (default: every field except `phone`). With `email` and no matching contact, the result
+        is returned without creating anything unless `create: true`.
+      properties:
+        contact_id: { type: string, description: "An existing contact in this workspace." }
+        email: { type: string, format: email, example: anna.roth@acme.com }
+        fields:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/ContactEnrichField" }
+          description: "Default: all except `phone` (phone is a separate, costlier lookup; ask for it explicitly)."
+        create:
+          type: boolean
+          default: false
+          description: "Only with `email`: create the contact when none matches, then propose the enrichment against it."
+        first_name: { type: string, description: "Helps match (and names a created contact) when no contact exists yet." }
+        last_name: { type: string }
+        full_name: { type: string }
+    ContactEnrichField:
+      type: string
+      enum: [job_title, linkedin_url, profile_picture_url, company, website, industry, city, state, country, office_address, email, phone]
+    CompanyEnrichRequest:
+      type: object
+      description: |
+        Exactly one of `company_id` (a client company of this workspace) or `domain`. Optional
+        `fields` limits what is looked up (default: all). With `domain` and no matching company,
+        the result is returned without creating anything unless `create: true`.
+      properties:
+        company_id: { type: string }
+        domain: { type: string, example: acme.com, description: "A URL is accepted and reduced to its host." }
+        fields:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/CompanyEnrichField" }
+        create:
+          type: boolean
+          default: false
+          description: "Only with `domain`: create the client company when none matches (named `name`, else the provider's match, else the domain), then propose the enrichment against it."
+        name: { type: string, description: "Name for a created company." }
+    CompanyEnrichField:
+      type: string
+      enum: [website, domain, industry, size, linkedin_url, logo_url, description, city, state, country, street, postal_code]
+    EnrichedValue:
+      type: object
+      required: [value, source]
+      properties:
+        value: { type: string }
+        source: { type: string, description: "Provider that supplied the value, e.g. `apollo` or `aleads`.", example: apollo }
+    EnrichProviderStep:
+      type: object
+      required: [name, outcome]
+      description: One provider in the cascade, in the order it ran.
+      properties:
+        name: { type: string, example: apollo }
+        outcome: { type: string, enum: [match, no_match, error, skipped] }
+        fields: { type: array, items: { type: string }, description: "outcome=match: the fields this provider supplied." }
+        reason: { type: string, description: "outcome=no_match or skipped, e.g. `not_found`, `ambiguous`, `nothing_to_supply`, `out_of_time`." }
+        code: { type: string, description: "outcome=error, e.g. `apollo_timeout`." }
+        warning: { type: string, description: "outcome=match with a failed sub-lookup, e.g. `find_email_timeout`." }
+    RecordEnrichResult:
+      type: object
+      required: [status, record, proposal, fields, skipped, providers, match, credits_used]
+      properties:
+        status:
+          type: string
+          enum: [proposed, found, nothing_new, no_match]
+          description: |
+            `proposed`: new values are waiting in the Enrich review queue (1 credit).
+            `found`: no record and `create` was false; the values are returned only (1 credit).
+            `nothing_new`: every requested field is already filled, or nothing found was new (0 credits).
+            `no_match`: no provider found the person or company (0 credits).
+        record:
+          type: [object, "null"]
+          required: [type, id, created]
+          properties:
+            type: { type: string, enum: [contact, company] }
+            id: { type: string }
+            created: { type: boolean, description: "Created by this request (`create: true`)." }
+        proposal:
+          type: [object, "null"]
+          required: [id, status]
+          description: "The pending proposal. Nothing reaches the record until someone approves it in LeadLex."
+          properties:
+            id: { type: string, format: uuid }
+            status: { type: string, enum: [pending] }
+        fields:
+          type: object
+          description: "Proposed (or, for `found`, returned) values, keyed by CRM field, each with its source provider."
+          additionalProperties: { $ref: "#/components/schemas/EnrichedValue" }
+          example: { job_title: { value: General Counsel, source: apollo }, email: { value: anna.roth@acme.com, source: aleads } }
+        skipped:
+          type: array
+          items:
+            type: object
+            required: [field, reason]
+            properties:
+              field: { type: string }
+              reason:
+                type: string
+                enum: [already_set, not_found, already_in_crm]
+                description: "`already_set`: the record has a value (never overwritten, never looked up). `not_found`: no provider had it. `already_in_crm`: another contact already has this email."
+        providers:
+          type: array
+          items: { $ref: "#/components/schemas/EnrichProviderStep" }
+        match:
+          type: [object, "null"]
+          description: "Who the first matching provider matched, for judging whether it is the same person or company."
+          properties:
+            name: { type: [string, "null"] }
+            title: { type: [string, "null"] }
+            company: { type: [string, "null"] }
+            location: { type: [string, "null"] }
+            linkedin_url: { type: [string, "null"] }
+            photo_url: { type: [string, "null"] }
+            reasons: { type: array, items: { type: string } }
+        credits_used: { type: integer, enum: [0, 1] }
     ProspectRevealResult:
       allOf:
         - { $ref: "#/components/schemas/EmailRevealResult" }
@@ -611,6 +732,48 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
     UpstreamError:
       description: "The email provider failed (`upstream_error`, 502; the credit is refunded unless the message says otherwise), or the reveal did not answer in time (`upstream_timeout`, 504; the outcome is unknown, check the credit balance before retrying)."
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    AmbiguousRecord:
+      description: "`ambiguous_record`: several records in this workspace have that email or domain. Retry with one candidate's id. No credit used."
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema:
+            allOf:
+              - { $ref: "#/components/schemas/Error" }
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      candidates:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            name: { type: [string, "null"] }
+    EnrichUpstreamError:
+      description: "`upstream_error`: every provider that was tried failed. The credit is refunded unless the message says otherwise; retry later."
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    EnrichUnavailable:
+      description: "`review_not_set_up` (the review queue is not installed in this environment; nothing was changed), `service_unavailable` (no provider configured) or `billing_unavailable` (credits could not be checked). No credit used unless the message says otherwise."
+      headers:
+        X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    EnrichSaveFailed:
+      description: "`create_failed` or `internal_error`: the record could not be created, or the proposal could not be saved. The credit is refunded unless the message says otherwise."
       headers:
         X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
       content:
@@ -4046,6 +4209,120 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/enrich/contact:
+    post:
+      operationId: enrichContact
+      summary: Enrich a contact from data providers
+      description: |
+        Looks up a contact's professional data with the configured providers, in order
+        (default Apollo for firmographics, then A-Leads for work email and phone). Each provider
+        is asked only for the fields still missing; the first provider to supply a field wins it,
+        and each value reports its `source`. A provider that fails or times out is skipped.
+
+        **Nothing is written onto the contact.** New values become a pending proposal in the
+        Enrich review queue; a person approves them in LeadLex. Only blank fields are proposed.
+        Contacts are matched in this workspace only: not archived, not merged, not private to
+        another member. An `email` matching several contacts answers 409.
+
+        Billing: **1 credit when at least one new field is proposed** (or returned, for `found`).
+        No match, nothing new, and every error below cost nothing. Send an `Idempotency-Key` to
+        retry safely: a repeat with the same key returns the stored response and is not charged
+        again. Allow up to 60 seconds for a response.
+      tags: [Enrichment]
+      x-permission-scope: enrichment:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactEnrichRequest" }
+            examples:
+              byId: { value: { contact_id: "8f14e45f-ceea-4e7a-9a1b-1c2d3e4f5a6b" } }
+              byEmailCreate: { value: { email: anna.roth@acme.com, first_name: Anna, last_name: Roth, create: true, fields: [job_title, linkedin_url, phone] } }
+      responses:
+        "200":
+          description: "The lookup ran; see `status` and `credits_used`."
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RecordEnrichResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/InsufficientCredits" }
+        "403":
+          description: "`insufficient_permissions` (needs `enrichment:write`) or `subscription_inactive`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/AmbiguousRecord" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/EnrichSaveFailed" }
+        "502": { $ref: "#/components/responses/EnrichUpstreamError" }
+        "503": { $ref: "#/components/responses/EnrichUnavailable" }
+  /v1/enrich/company:
+    post:
+      operationId: enrichCompany
+      summary: Enrich a client company from data providers
+      description: |
+        Looks up a client company's firmographics by domain with the configured providers
+        (default Apollo), each value with its `source`. Works on client companies of this
+        workspace only, never on the workspace itself; a `domain` matching several companies
+        answers 409.
+
+        **Nothing is written onto the company.** New values for blank fields become a pending
+        proposal in the company review queue. Billing, idempotency and timing as for
+        `POST /v1/enrich/contact`: 1 credit when at least one new field is proposed (or returned).
+      tags: [Enrichment]
+      x-permission-scope: enrichment:write
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKeyHeader" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyEnrichRequest" }
+            examples:
+              byId: { value: { company_id: "2b1c9d4e-0f3a-4c5b-8d7e-6f5a4b3c2d1e" } }
+              byDomain: { value: { domain: acme.com, create: true } }
+      responses:
+        "200":
+          description: "The lookup ran; see `status` and `credits_used`."
+          headers:
+            X-Request-ID: { $ref: "#/components/headers/X-Request-ID" }
+            X-RateLimit-Limit: { $ref: "#/components/headers/X-RateLimit-Limit" }
+            X-RateLimit-Remaining: { $ref: "#/components/headers/X-RateLimit-Remaining" }
+            X-RateLimit-Reset: { $ref: "#/components/headers/X-RateLimit-Reset" }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RecordEnrichResult" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/InsufficientCredits" }
+        "403":
+          description: "`insufficient_permissions` (needs `enrichment:write`) or `subscription_inactive`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/AmbiguousRecord" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/EnrichSaveFailed" }
+        "502": { $ref: "#/components/responses/EnrichUpstreamError" }
+        "503": { $ref: "#/components/responses/EnrichUnavailable" }
   /v1/scan/business-card:
     post:
       operationId: scanBusinessCard

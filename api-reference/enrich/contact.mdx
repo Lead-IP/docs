@@ -1,0 +1,206 @@
+---
+title: "Enrich Contact"
+api: "POST /v1/enrich/contact"
+description: "Look up a contact's professional data and send new values to review"
+---
+
+Looks up professional data for one contact with the configured providers. Apollo supplies person and company firmographics. A-Leads supplies the verified email and phone. The provider order is configurable, and each returned field names its source.
+
+<Note>
+  Required permission scope: `enrichment:write`, because this call can spend credits and read-only keys cannot make it.
+</Note>
+
+## What happens to the result
+
+New values are never written onto the record directly. They become a proposal that waits for review in the app, in the enrichment review in Settings. Only blank fields on the record are proposed. Only contacts in this workspace are matched: not archived, not merged, and not private to another member.
+
+## Billing
+
+| Status | Credits | What it means |
+|--------|---------|---------------|
+| `proposed` | 1 | New values are pending review |
+| `found` | 1 | No record exists and `create` is false, so the values are returned only |
+| `nothing_new` | 0 | The providers had nothing the record does not already have |
+| `no_match` | 0 | The providers found no match |
+
+A contact lookup that includes `phone` still costs 1 credit. Errors are never charged. The credit balance is checked before any provider is called. Allow up to 60 seconds for a response.
+
+## Request
+
+### Headers
+
+```
+Authorization: Bearer wbk_your_api_key
+Content-Type: application/json
+```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional. A retry with the same key replays the stored 200 response without a second charge. Two requests sent at the same time with the same key can both run, so send retries one after another.
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="contact_id" type="string">
+  ID of an existing contact in the workspace. Send exactly one of `contact_id` or `email`.
+</ParamField>
+
+<ParamField body="email" type="string">
+  Email of the contact to look up. Send exactly one of `contact_id` or `email`. If several contacts share the email, the call returns `409 ambiguous_record`.
+</ParamField>
+
+<ParamField body="create" type="boolean" default="false">
+  Create the contact when none matches. Only allowed together with `email`.
+</ParamField>
+
+<ParamField body="first_name" type="string">
+  First name for a newly created contact. Only used with `email`.
+</ParamField>
+
+<ParamField body="last_name" type="string">
+  Last name for a newly created contact. Only used with `email`.
+</ParamField>
+
+<ParamField body="full_name" type="string">
+  Full name for a newly created contact, as an alternative to `first_name` and `last_name`. Only used with `email`.
+</ParamField>
+
+<ParamField body="fields" type="string[]">
+  Which fields to look up. Any subset of `job_title`, `linkedin_url`, `profile_picture_url`, `company`, `website`, `industry`, `city`, `state`, `country`, `office_address`, `email` and `phone`. Default: all except `phone`. Phone is off by default. Asking for it costs the same 1 credit.
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="object">
+  <Expandable title="properties">
+    <ResponseField name="status" type="string">`proposed`, `found`, `nothing_new` or `no_match`</ResponseField>
+    <ResponseField name="record" type="object | null">
+      <Expandable title="properties">
+        <ResponseField name="type" type="string">`contact` or `company`</ResponseField>
+        <ResponseField name="id" type="string">ID of the record</ResponseField>
+        <ResponseField name="created" type="boolean">Whether this call created the record</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="proposal" type="object | null">
+      <Expandable title="properties">
+        <ResponseField name="id" type="string">ID of the proposal</ResponseField>
+        <ResponseField name="status" type="string">`pending`</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="fields" type="object">A map from field name to `{ value, source }`. `source` names the provider that supplied the value</ResponseField>
+    <ResponseField name="skipped" type="object[]">
+      <Expandable title="properties">
+        <ResponseField name="field" type="string">The field that was not proposed</ResponseField>
+        <ResponseField name="reason" type="string">`already_set`, `not_found` or `already_in_crm`</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="providers" type="object[]">
+      <Expandable title="properties">
+        <ResponseField name="name" type="string">Provider name</ResponseField>
+        <ResponseField name="outcome" type="string">What this provider returned</ResponseField>
+        <ResponseField name="fields" type="string[]">Fields this provider supplied</ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="match" type="object | null">Who the providers matched: `name`, `title`, `company`, `location`, `linkedin_url`, `photo_url` and `reasons`. `null` when nothing matched</ResponseField>
+    <ResponseField name="credits_used" type="integer">`0` or `1`</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/contact \
+  -H "Authorization: Bearer wbk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: 7e0b7c0e-5b2f-4b17-bf2a-4d7e7e33d9f1" \
+  -d '{ "email": "anna.roth@acme.com", "first_name": "Anna", "last_name": "Roth", "create": true, "fields": ["job_title", "linkedin_url", "phone"] }'
+```
+
+```python Python
+import requests, uuid
+
+API_KEY = "wbk_your_api_key"
+BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json",
+    "Idempotency-Key": str(uuid.uuid4()),
+}
+response = requests.post(f"{BASE_URL}/v1/enrich/contact", headers=headers, json={"email": "anna.roth@acme.com", "first_name": "Anna", "last_name": "Roth", "create": True, "fields": ["job_title", "linkedin_url", "phone"]})
+print(response.json()["data"]["status"])
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://data.leadlex.com/functions/v1/api-gateway/v1/enrich/contact',
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer wbk_your_api_key',
+      'Content-Type': 'application/json',
+      'Idempotency-Key': crypto.randomUUID()
+    },
+    body: JSON.stringify({ email: 'anna.roth@acme.com', first_name: 'Anna', last_name: 'Roth', create: true, fields: ['job_title', 'linkedin_url', 'phone'] })
+  }
+);
+const { data } = await response.json();
+console.log(data.status);
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "data": {
+    "status": "proposed",
+    "record": { "type": "contact", "id": "8f14e45f-ceea-4e7a-9a1b-1c2d3e4f5a6b", "created": true },
+    "proposal": { "id": "c3a1f6d2-5b7e-4a90-8e12-0d4f6b8a9c71", "status": "pending" },
+    "fields": {
+      "job_title": { "value": "General Counsel", "source": "apollo" },
+      "linkedin_url": { "value": "https://www.linkedin.com/in/anna-roth-example", "source": "apollo" },
+      "phone": { "value": "+49 30 1234567", "source": "a-leads" }
+    },
+    "skipped": [],
+    "providers": [
+      { "name": "apollo", "outcome": "found", "fields": ["job_title", "linkedin_url"] },
+      { "name": "a-leads", "outcome": "found", "fields": ["phone"] }
+    ],
+    "match": {
+      "name": "Anna Roth",
+      "title": "General Counsel",
+      "company": "Acme",
+      "location": "Berlin, Germany",
+      "linkedin_url": "https://www.linkedin.com/in/anna-roth-example",
+      "photo_url": null,
+      "reasons": ["email"]
+    },
+    "credits_used": 1
+  }
+}
+```
+
+## Ambiguous matches
+
+If more than one record matches, the call returns `409 ambiguous_record` with `data.candidates[]`, each with an `id` and a `name`. Nothing is charged. Retry with the `contact_id` of one candidate.
+
+## Errors
+
+Errors use the standard error envelope. None of them is charged.
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 400 | `validation_error` | The body does not match the request shape |
+| 402 | `insufficient_credits` | The workspace has no credits left. Checked before any provider is called |
+| 403 | `insufficient_permissions` | The key lacks the `enrichment:write` scope |
+| 403 | `subscription_inactive` | The workspace subscription is not active |
+| 404 | `not_found` | The record does not exist in this workspace |
+| 409 | `ambiguous_record` | Several records match. Retry with a candidate's ID |
+| 429 | `rate_limited` | Too many requests |
+| 500 | `create_failed` | The record could not be created |
+| 500 | `internal_error` | Something went wrong on our side |
+| 502 | `upstream_error` | Every provider failed |
+| 503 | `review_not_set_up` | The enrichment review is not set up for the workspace |
+| 503 | `service_unavailable` | Enrichment is not available |
+| 503 | `billing_unavailable` | Billing could not be checked |
