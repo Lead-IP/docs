@@ -1,0 +1,33 @@
+---
+title: "Connect ChatGPT"
+description: "Add LeadLex to ChatGPT as a custom MCP connector."
+---
+
+Source: [OpenAI Help Center, Connecting custom MCP servers in ChatGPT](https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt).
+
+ChatGPT connects to LeadLex as a custom connector that points at the remote MCP server.
+
+<Steps>
+  <Step title="Open connector settings">
+    Custom MCP servers are available on ChatGPT Business, Enterprise and Edu, on ChatGPT web. On Business, only workspace admins and owners can add them. In ChatGPT, go to **Plugins**, select the plus button and choose **Add custom MCP server**. Developer mode is not needed.
+  </Step>
+  <Step title="Create the connector">
+    Use `LeadLex` as the name and enter this URL under **Connection**:
+
+    ```
+    https://mcp.leadlex.com/mcp
+    ```
+  </Step>
+  <Step title="Choose OAuth">
+    Select OAuth as the authentication method. LeadLex supports dynamic client registration, so ChatGPT does not need a pre-created client id. Tick **I understand and want to continue**, then select **Create as a plugin** and review the tools ChatGPT found.
+  </Step>
+  <Step title="Approve access">
+    Sign in to LeadLex and approve the consent screen.
+  </Step>
+</Steps>
+
+In a new chat, enable the LeadLex connector and ask something like "Show me my open deals".
+
+<Tip>
+  OAuth is the right choice for ChatGPT. Tools that act on your own LinkedIn account or mailbox need a signed-in user and do not work with an API key.
+</Tip>

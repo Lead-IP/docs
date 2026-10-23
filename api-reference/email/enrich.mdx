@@ -1,97 +1,124 @@
 ---
-title: "Enrich Email or Domain"
+title: "Enrich Email"
 api: "POST /v1/email/enrich"
-description: "Look up a person or organization from an email address or domain"
+description: "Find a person's work email from their name and company domain"
 ---
 
-<Warning>
-  This endpoint consumes enrichment credits from your workspace balance. Each successful lookup costs 1 credit. If the workspace is out of credits, the API returns `402 insufficient_credits`.
-</Warning>
+Finds a work email for one person. A free people search runs first. It must match exactly one person with that name at that domain, and only then is the email revealed.
+
+<Note>
+  `POST /v1/enrich/email` is an alias with the same contract. Required permission scope: `enrichment:write`, because this call can spend credits and read-only keys cannot make it.
+</Note>
+
+## Billing
+
+The call costs 1 credit only when the provider returns a verified email that the workspace does not already have. These cases are refunded: no email found, an unverified email, or an email already in the CRM. The response shows what happened in `charged` and `refunded`.
 
 ## Request
 
 ### Headers
 
 ```
-Authorization: Bearer wbk_your_api_key_here
+Authorization: Bearer wbk_your_api_key
 Content-Type: application/json
 ```
 
 <ParamField header="Idempotency-Key" type="string">
-  Optional UUID to deduplicate retries within 24 hours. The credit is only charged on the first successful call.
+  Optional. A retry with the same key replays the stored 200 response without a second charge. Two requests sent at the same time with the same key can both run, so send retries one after another.
 </ParamField>
 
 ### Body Parameters
 
-<ParamField body="email" type="string">
-  Email address to resolve. Either `email` or `domain` is required.
+Send one of these three shapes.
+
+<ParamField body="first_name" type="string">
+  First name. Use together with `last_name` and `domain`.
+</ParamField>
+
+<ParamField body="last_name" type="string">
+  Last name. Use together with `first_name` and `domain`.
+</ParamField>
+
+<ParamField body="full_name" type="string">
+  Full name. Use together with `domain` instead of `first_name` and `last_name`.
 </ParamField>
 
 <ParamField body="domain" type="string">
-  Domain name to resolve (e.g. `acme.com`). Either `email` or `domain` is required.
+  Company domain, for example `acme.com`. A URL is accepted and reduced to its host. The person must be on this domain, and a different domain never matches.
 </ParamField>
 
-<ParamField body="include" type="array">
-  Optional subset of sections to return: `person`, `company`, `social`. Defaults to all.
+<ParamField body="document_id" type="string">
+  Document ID from `POST /v1/prospector/search`, in the format `member_id_company_id`. Use it alone, without a name or domain.
 </ParamField>
+
+Name matching ignores case, accents and punctuation in any script.
 
 ## Response
 
 <ResponseField name="data" type="object">
   <Expandable title="properties">
-    <ResponseField name="person" type="object">Personal details when `email` is provided: `full_name`, `first_name`, `last_name`, `job_title`, `seniority`, `location`, `linkedin_url`.</ResponseField>
-    <ResponseField name="company" type="object">Organizational details: `name`, `domain`, `industry`, `size`, `founded_year`, `description`, `linkedin_url`, `hq_location`.</ResponseField>
-    <ResponseField name="social" type="object">Social handles, where available.</ResponseField>
-    <ResponseField name="source" type="string">Origin of the data (`vendor_a`, `vendor_b`, `cached`).</ResponseField>
-    <ResponseField name="confidence" type="number">Confidence score from 0.0 to 1.0.</ResponseField>
-    <ResponseField name="credits_remaining" type="integer">Workspace credit balance after this call.</ResponseField>
+    <ResponseField name="email" type="string | null">The work email, or `null` when none was found</ResponseField>
+    <ResponseField name="email_status" type="string | null">Status reported by the provider</ResponseField>
+    <ResponseField name="verification" type="string | null">`verified`, `unverified` or `null`</ResponseField>
+    <ResponseField name="already_in_crm" type="boolean">Whether the workspace already had this email</ResponseField>
+    <ResponseField name="charged" type="boolean">Whether a credit was charged</ResponseField>
+    <ResponseField name="refunded" type="boolean">Whether the credit was refunded</ResponseField>
+    <ResponseField name="credits_used" type="integer">Credits used by this call after any refund</ResponseField>
+    <ResponseField name="person" type="object">
+      <Expandable title="properties">
+        <ResponseField name="document_id" type="string">Document ID of the matched person</ResponseField>
+        <ResponseField name="full_name" type="string">Full name</ResponseField>
+        <ResponseField name="job_title" type="string">Job title</ResponseField>
+        <ResponseField name="company" type="string">Company name</ResponseField>
+        <ResponseField name="company_domain" type="string">Company domain</ResponseField>
+        <ResponseField name="linkedin_url" type="string | null">LinkedIn URL</ResponseField>
+      </Expandable>
+    </ResponseField>
   </Expandable>
 </ResponseField>
-
-Responses include `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and `X-Request-ID`.
 
 <CodeGroup>
 
 ```bash cURL
-curl -X POST \
-  https://data.leadlex.com/functions/v1/api-gateway/v1/email/enrich \
-  -H "Authorization: Bearer wbk_your_api_key_here" \
+curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/email/enrich \
+  -H "Authorization: Bearer wbk_your_api_key" \
   -H "Content-Type: application/json" \
-  -d '{"email": "jane@acme.com"}'
+  -H "Idempotency-Key: 7e0b7c0e-5b2f-4b17-bf2a-4d7e7e33d9f1" \
+  -d '{ "first_name": "Anna", "last_name": "Roth", "domain": "acme.com" }'
 ```
 
 ```python Python
-import requests
+import requests, uuid
 
-API_KEY = "wbk_your_api_key_here"
+API_KEY = "wbk_your_api_key"
 BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
-r = requests.post(
-    f"{BASE_URL}/v1/email/enrich",
-    headers={
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    },
-    json={"email": "jane@acme.com"},
-)
-person = r.json()["data"]["person"]
-print(person["full_name"], person["job_title"])
+headers = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json",
+    "Idempotency-Key": str(uuid.uuid4()),
+}
+response = requests.post(f"{BASE_URL}/v1/email/enrich", headers=headers, json={
+    "first_name": "Anna", "last_name": "Roth", "domain": "acme.com"
+})
+print(response.json()["data"]["email"])
 ```
 
 ```javascript JavaScript
-const res = await fetch(
+const response = await fetch(
   'https://data.leadlex.com/functions/v1/api-gateway/v1/email/enrich',
   {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer wbk_your_api_key_here',
+      'Authorization': 'Bearer wbk_your_api_key',
       'Content-Type': 'application/json',
+      'Idempotency-Key': crypto.randomUUID()
     },
-    body: JSON.stringify({ email: 'jane@acme.com' }),
+    body: JSON.stringify({ first_name: 'Anna', last_name: 'Roth', domain: 'acme.com' })
   }
 );
-const { data } = await res.json();
-console.log(data.person?.full_name);
+const { data } = await response.json();
+console.log(data.email);
 ```
 
 </CodeGroup>
@@ -101,37 +128,39 @@ console.log(data.person?.full_name);
 ```json
 {
   "data": {
+    "email": "anna.roth@acme.com",
+    "email_status": "valid",
+    "verification": "verified",
+    "already_in_crm": false,
+    "charged": true,
+    "refunded": false,
+    "credits_used": 1,
     "person": {
-      "full_name": "Jane Doe",
-      "first_name": "Jane",
-      "last_name": "Doe",
+      "document_id": "123456_7890",
+      "full_name": "Anna Roth",
       "job_title": "General Counsel",
-      "seniority": "executive",
-      "location": "New York, NY, US",
-      "linkedin_url": "https://linkedin.com/in/janedoe"
-    },
-    "company": {
-      "name": "Acme Corp",
-      "domain": "acme.com",
-      "industry": "Legal Services",
-      "size": "201-500",
-      "founded_year": 1998,
-      "hq_location": "New York, NY, US"
-    },
-    "source": "vendor_a",
-    "confidence": 0.92,
-    "credits_remaining": 4872
+      "company": "Acme",
+      "company_domain": "acme.com",
+      "linkedin_url": null
+    }
   }
 }
 ```
 
+## Ambiguous matches
+
+If several people share the name at that domain, the call returns `409 ambiguous_person` with `data.candidates[]`, each in the same shape as `person`. Nothing is charged. Retry with the `document_id` of one candidate.
+
 ## Errors
+
+Errors use the standard error envelope.
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Neither `email` nor `domain` was provided |
-| 401 | `invalid_key` | Invalid or expired API key |
-| 402 | `insufficient_credits` | Workspace credit balance is exhausted |
-| 403 | `insufficient_permissions` | Missing `write:enrich` permission |
-| 404 | `no_match` | Upstream providers returned no data for the input |
-| 429 | `rate_limited` | Rate limit exceeded |
+| 400 | `validation_error` | The body does not match one of the three shapes |
+| 402 | `insufficient_credits` | The workspace has no credits left |
+| 404 | `person_not_found` | Nobody with that name at that domain. No charge |
+| 409 | `ambiguous_person` | Several matches. Retry with a candidate's `document_id`. No charge |
+| 502 | `upstream_error` | The data provider failed. The credit is refunded unless the error message says the refund failed |
+| 503 | `service_unavailable` | Email enrichment is not available |
+| 504 | `upstream_timeout` | The outcome is unknown. Check your credit balance before retrying |

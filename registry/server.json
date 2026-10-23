@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.leadlex/mcp",
+  "title": "LeadLex",
+  "description": "CRM for European law firms: contacts, matters, tasks, email and prospecting through MCP.",
+  "version": "0.2.0",
+  "websiteUrl": "https://www.leadlex.com/developers/mcp",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.leadlex.com/mcp",
+      "headers": [
+        {
+          "name": "X-API-Key",
+          "description": "Optional workspace API key (starts with wbk_). Leave empty to sign in with OAuth 2.1 instead.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

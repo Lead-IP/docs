@@ -1,0 +1,98 @@
+---
+title: "Authentication"
+description: "Sign in to the LeadLex MCP server with OAuth 2.1 or a workspace API key."
+---
+
+The server accepts two kinds of credentials. Use OAuth when a person connects an assistant. Use an API key for scripts and command-line tools.
+
+| | OAuth 2.1 | Workspace API key |
+| --- | --- | --- |
+| Best for | Claude, ChatGPT, Cursor | Scripts, CLIs, headless agents |
+| Header | `Authorization: Bearer <token>` (set by the client) | `X-API-Key: wbk_...` |
+| Acts as | The signed-in user | The workspace, attributed to the key's owner |
+| Client setup | None, clients register themselves | Create a key in the dashboard |
+| Revoke | Dashboard or `/revoke` | Delete the key |
+
+## OAuth 2.1
+
+LeadLex supports OAuth 2.1 with dynamic client registration (RFC 7591), so a client needs only the server URL.
+
+1. The client reads the discovery documents and registers itself at `/register`.
+2. It sends you to `/authorize`, which redirects to the LeadLex consent screen on `app.leadlex.com`.
+3. After you approve, the client exchanges the authorization code at `/token`.
+
+Requirements and behaviour confirmed in the server code:
+
+- PKCE with `S256` is required. Plain PKCE is not accepted.
+- Scopes are `read`, `write` and `lexi`. A client registered without a scope gets `read write`.
+- Authorization codes work once.
+- Access tokens last 1 hour. Refresh tokens last 30 days.
+- Refresh tokens rotate: every refresh revokes the old pair and issues a new one. A refresh request can narrow the scope but never widen it.
+- Redirect URIs must be `https`, `http` on `localhost` or `127.0.0.1`, or a custom app scheme. They are matched exactly.
+- Token endpoint authentication can be `none` (public client), `client_secret_post` or `client_secret_basic`.
+- Registration is rate limited per IP address.
+
+### Discovery
+
+| Document | URL |
+| --- | --- |
+| Authorization server metadata (RFC 8414) | `https://mcp.leadlex.com/.well-known/oauth-authorization-server` |
+| Protected resource metadata (RFC 9728) | `https://mcp.leadlex.com/.well-known/oauth-protected-resource` |
+
+Both documents are also served with a `/mcp` suffix for clients that derive the URL from the resource path. A `401` from the MCP endpoint carries a `WWW-Authenticate` header that points to the protected resource metadata.
+
+| Endpoint | URL |
+| --- | --- |
+| Registration | `https://mcp.leadlex.com/register` |
+| Authorization | `https://mcp.leadlex.com/authorize` |
+| Token | `https://mcp.leadlex.com/token` |
+| Revocation (RFC 7009) | `https://mcp.leadlex.com/revoke` |
+
+### Scopes
+
+| Scope | Allows |
+| --- | --- |
+| `read` | Search and read records |
+| `write` | Create, update, move and delete records |
+| `lexi` | Reserved for delegating work to the Lexi agent. The delegation tool is not in the standard tool list |
+
+### Revoke access
+
+Open **Settings**, then **API & Integrations**, then **Connected AI Assistants** in the LeadLex dashboard. A client can also call `/revoke` with its token.
+
+## Workspace API key
+
+Create a key under **Settings** then **API & Integrations** in the [LeadLex dashboard](https://app.leadlex.com). Keys start with `wbk_`. Send the key in the `X-API-Key` header:
+
+```bash
+curl -X POST https://mcp.leadlex.com/mcp \
+  -H "X-API-Key: wbk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+- The key's permissions decide what it can do. Tools that write need the `write` permission, otherwise the call returns `403`.
+- Records the key creates are attributed to the key's owner when the key has one.
+- Keep the key out of source control. See the [API key guide](/authentication) for permissions and rotation.
+
+### OAuth only tools
+
+An API key has no user behind it. These tools act for one person and refuse a key: `create_campaign`, `list_sending_accounts`, `set_campaign_sending_account` and all of the LinkedIn tools (`linkedin_status`, `request_linkedin_connection`, `send_linkedin_message`, `list_linkedin_conversations`, `set_linkedin_do_not_contact`, `set_linkedin_settings`).
+
+Email search also differs. With OAuth, email tools read the signed-in user's own synced mailbox. With an API key, they read across the workspace.
+
+## Rate limits
+
+Every OAuth connection and API key can make 60 tool calls a minute. If you need more, write to [support@leadlex.com](mailto:support@leadlex.com).
+
+Over the limit, the server returns `429` with a `Retry-After` header.
+
+## Error responses
+
+| Status | Meaning |
+| --- | --- |
+| `401` | Missing, invalid, revoked or expired credentials |
+| `403` | The key or token lacks the permission the tool needs |
+| `429` | Rate limit exceeded |
+| `503` | The authentication service is unavailable. Retry shortly |

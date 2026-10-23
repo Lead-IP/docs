@@ -1,46 +1,59 @@
 ---
 title: "Reveal Prospect"
 api: "POST /v1/prospector/reveal"
-description: "Reveal email and phone for a single prospect found via search"
+description: "Reveal the work email for one prospect found via search"
 ---
 
+<Warning>
+  The change dated 2026-10-22 removed phone and name fields from reveal. The response now returns the email and its verification state only. Reveal is also billed now.
+</Warning>
+
+Required permission scope: `prospects:write`, because this call can spend credits and read-only keys cannot make it.
+
+## Billing
+
+Billed the same way as [Enrich Email](/api-reference/email/enrich): 1 credit only when the provider returns a verified email that the workspace does not already have. No email, an unverified email, or an email already in the CRM is refunded.
+
 ## Request
-
-### Body Parameters
-
-<ParamField body="member_id" type="string">
-  Member ID from search results (required unless `document_id` provided)
-</ParamField>
-
-<ParamField body="company_id" type="string">
-  Company ID from search results (optional, improves accuracy)
-</ParamField>
-
-<ParamField body="document_id" type="string">
-  Direct document ID (alternative to member_id + company_id)
-</ParamField>
 
 ### Headers
 
 ```
-Authorization: Bearer wbk_your_api_key_here
+Authorization: Bearer wbk_your_api_key
 Content-Type: application/json
 ```
+
+<ParamField header="Idempotency-Key" type="string">
+  Optional. A retry with the same key replays the stored 200 response without a second charge. Send retries one after another, because two requests sent at the same time with the same key can both run.
+</ParamField>
+
+### Body Parameters
+
+Send `document_id`, or `member_id` with an optional `company_id`. All come from [Search Prospects](/api-reference/prospector/search).
+
+<ParamField body="document_id" type="string">
+  Document ID from search results, in the format `member_id_company_id`
+</ParamField>
+
+<ParamField body="member_id" type="string">
+  Member ID from search results. Use when you do not send `document_id`
+</ParamField>
+
+<ParamField body="company_id" type="string">
+  Company ID from search results. Optional
+</ParamField>
 
 ## Response
 
 <ResponseField name="data" type="object">
   <Expandable title="properties">
-    <ResponseField name="member_id" type="string">Member ID</ResponseField>
-    <ResponseField name="company_id" type="string">Company ID</ResponseField>
-    <ResponseField name="document_id" type="string">Document ID</ResponseField>
-    <ResponseField name="full_name" type="string">Full name</ResponseField>
-    <ResponseField name="email" type="string">Email address</ResponseField>
-    <ResponseField name="email_verified" type="boolean">Whether email is verified</ResponseField>
-    <ResponseField name="phone" type="string">Phone number</ResponseField>
-    <ResponseField name="linkedin_url" type="string">LinkedIn URL</ResponseField>
-    <ResponseField name="job_title" type="string">Job title</ResponseField>
-    <ResponseField name="company" type="string">Company name</ResponseField>
+    <ResponseField name="email" type="string | null">The work email, or `null` when none was found</ResponseField>
+    <ResponseField name="email_status" type="string | null">Status reported by the provider</ResponseField>
+    <ResponseField name="verification" type="string | null">`verified`, `unverified` or `null`</ResponseField>
+    <ResponseField name="email_verified" type="boolean">Whether the email is verified</ResponseField>
+    <ResponseField name="already_in_crm" type="boolean">Whether the workspace already had this email</ResponseField>
+    <ResponseField name="charged" type="boolean">Whether a credit was charged</ResponseField>
+    <ResponseField name="refunded" type="boolean">Whether the credit was refunded</ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -48,20 +61,20 @@ Content-Type: application/json
 
 ```bash cURL
 curl -X POST https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/reveal \
-  -H "Authorization: Bearer wbk_your_api_key_here" \
+  -H "Authorization: Bearer wbk_your_api_key" \
   -H "Content-Type: application/json" \
-  -d '{ "member_id": "12345", "company_id": "67890" }'
+  -d '{ "document_id": "123456_7890" }'
 ```
 
 ```python Python
 import requests
 
-API_KEY = "wbk_your_api_key_here"
+API_KEY = "wbk_your_api_key"
 BASE_URL = "https://data.leadlex.com/functions/v1/api-gateway"
 
 headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
 response = requests.post(f"{BASE_URL}/v1/prospector/reveal", headers=headers, json={
-    "member_id": "12345", "company_id": "67890"
+    "document_id": "123456_7890"
 })
 print(response.json())
 ```
@@ -71,8 +84,8 @@ const response = await fetch(
   'https://data.leadlex.com/functions/v1/api-gateway/v1/prospector/reveal',
   {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer wbk_your_api_key_here', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ member_id: '12345', company_id: '67890' })
+    headers: { 'Authorization': 'Bearer wbk_your_api_key', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ document_id: '123456_7890' })
   }
 );
 const { data } = await response.json();
@@ -80,10 +93,27 @@ const { data } = await response.json();
 
 </CodeGroup>
 
+### Example Response
+
+```json
+{
+  "data": {
+    "email": "anna.roth@acme.com",
+    "email_status": "valid",
+    "verification": "verified",
+    "email_verified": true,
+    "already_in_crm": false,
+    "charged": true,
+    "refunded": false
+  }
+}
+```
+
 ## Errors
 
 | Status | Code | Description |
 |--------|------|-------------|
-| 400 | `validation_error` | Missing `member_id` or `document_id` |
-| 403 | `insufficient_permissions` | Missing `prospects:read` permission |
-| 503 | `service_unavailable` | Enrichment service not configured |
+| 400 | `validation_error` | Missing `document_id` or `member_id` |
+| 402 | `insufficient_credits` | The workspace has no credits left |
+| 403 | `insufficient_permissions` | Missing `prospects:write` permission |
+| 502 | `upstream_error` | The data provider failed. The credit is refunded unless the error message says the refund failed |

@@ -69,7 +69,7 @@ const response = await fetch(
 
 ## Permissions
 
-API keys can have three types of permissions:
+API keys can have three types of permissions, plus an Enrichment group for the enrich endpoints:
 
 <AccordionGroup>
   <Accordion title="Read" icon="eye">
@@ -101,6 +101,13 @@ API keys can have three types of permissions:
     - `GET /v1/lexi/tasks`
     - `POST /v1/lexi/tasks/:id/approve`
   </Accordion>
+
+  <Accordion title="Enrichment" icon="wand-magic-sparkles">
+    Find a verified work email with [Enrich Email](/api-reference/email/enrich). These calls can spend credits, so read-only keys cannot make them.
+
+    **Endpoints:**
+    - `POST /v1/email/enrich`
+  </Accordion>
 </AccordionGroup>
 
 <Tip>
@@ -109,13 +116,7 @@ API keys can have three types of permissions:
 
 ## Rate Limits
 
-API usage is limited based on your workspace plan:
-
-| Plan | Daily Limit | Per Minute |
-|------|-------------|------------|
-| **Starter** | 100 calls | 10 |
-| **Pro** | 1,000 calls | 50 |
-| **Org** | 10,000 calls | 200 |
+Each API key can make 500 calls a day. If you need more, write to [support@leadlex.com](mailto:support@leadlex.com) and we can raise the limit for your key.
 
 <Note>
   Rate limits reset at midnight UTC (00:00).
@@ -126,8 +127,8 @@ API usage is limited based on your workspace plan:
 Every API response includes headers showing your current usage:
 
 ```
-X-RateLimit-Limit: 1000        # Total daily limit
-X-RateLimit-Remaining: 847     # Calls remaining today
+X-RateLimit-Limit: 500         # Total daily limit
+X-RateLimit-Remaining: 347     # Calls remaining today
 X-RateLimit-Reset: 1708905600  # Unix timestamp of reset
 ```
 

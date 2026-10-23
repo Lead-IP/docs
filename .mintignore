@@ -5,3 +5,7 @@
 # Draft content
 drafts/
 *.draft.mdx
+
+# Not for publishing: registry submission drafts
+registry/
+scripts/

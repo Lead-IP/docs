@@ -184,8 +184,8 @@ createContact();
 Every API response includes rate limit headers:
 
 ```
-X-RateLimit-Limit: 1000
-X-RateLimit-Remaining: 995
+X-RateLimit-Limit: 500
+X-RateLimit-Remaining: 495
 X-RateLimit-Reset: 1708905600
 ```
 
@@ -216,6 +216,13 @@ X-RateLimit-Reset: 1708905600
     href="/api-reference/contacts/list"
   >
     Browse all available endpoints
+  </Card>
+  <Card
+    title="MCP server"
+    icon="plug"
+    href="/mcp-server/overview"
+  >
+    Connect Claude, ChatGPT or Cursor to your workspace
   </Card>
   <Card
     title="Webhooks"
