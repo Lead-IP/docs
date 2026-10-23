@@ -16,8 +16,7 @@ rss: true
 
   ## Enrich contact and enrich company
 
-  `POST /v1/enrich/contact` is back. It runs on verified data providers and sends results to review instead of writing them directly. Company enrichment will return once a provider that allows it is in place.
-
+  `POST /v1/enrich/contact` and `POST /v1/enrich/company` are paused while they are rebuilt on licensed data providers. Until then they return `501 not_implemented`.
 
   ## Rate limit
 
