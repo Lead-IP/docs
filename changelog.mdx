@@ -4,25 +4,6 @@ description: "What changed in the LeadLex developer docs, API and MCP server."
 rss: true
 ---
 
-<Update label="October 22, 2026" description="Email enrichment and prospector reveal" tags={["API"]}>
-  ## Email enrichment works again
-
-  [Enrich Email](/api-reference/email/enrich) finds a work email from a name and company domain, or from a prospector `document_id`. It is billed only when it returns a new verified email. Other outcomes are refunded.
-
-  ## Prospector reveal
-
-  - [Reveal](/api-reference/prospector/reveal) and [bulk reveal](/api-reference/prospector/reveal-bulk) are now billed in the same way and need the `prospects:write` scope.
-  - They return fewer fields. Phone and name fields are gone, and the response carries the email, its verification state and the billing outcome.
-
-  ## Enrich contact and enrich company
-
-  `POST /v1/enrich/contact` and `POST /v1/enrich/company` are paused while they are rebuilt on licensed data providers. Until then they return `501 not_implemented`.
-
-  ## Rate limit
-
-  The API rate limit is 500 calls a day per key.
-</Update>
-
 <Update label="October 21, 2026" description="MCP documentation" tags={["MCP", "Docs"]}>
   ## LeadLex MCP server docs
 

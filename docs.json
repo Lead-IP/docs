@@ -151,9 +151,7 @@
           {
             "group": "Prospector",
             "pages": [
-              "api-reference/prospector/search",
-              "api-reference/prospector/reveal",
-              "api-reference/prospector/reveal-bulk"
+              "api-reference/prospector/search"
             ]
           },
           {
@@ -243,7 +241,6 @@
             "group": "Email",
             "pages": [
               "api-reference/email/send",
-              "api-reference/email/enrich",
               "api-reference/email/threads-list",
               "api-reference/email/threads-get",
               "api-reference/email/sync",
